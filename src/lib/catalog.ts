@@ -23,7 +23,8 @@ const img = {
   speakers: { src: "/images/catalog/speakers.webp" },
   converter: { src: "/images/catalog/converter.webp" },
   board: { src: "/images/catalog/board.webp" },
-  // Placeholder illustrations
+  // Placeholder illustrations: only for products without a manufacturer photo yet
+  // (manufacturer photos live in /public/images/products, named by part number).
   hdd: { src: "/images/catalog/hdd.webp" },
   ssd: { src: "/images/catalog/ssd.webp" },
   ram: { src: "/images/catalog/ram.webp" },
@@ -57,7 +58,7 @@ export const categories: Category[] = [
     name: "Hard Drives (HDD, SSD)",
     short: "Hard Drives",
     description: "Enterprise SATA and SAS hard drives and solid-state drives for servers, storage and workstations.",
-    image: img.hdd,
+    image: { src: "/images/products/st4000nm000a.jpg" },
     children: [
       { slug: "hdd", name: "Hard Disk Drives (HDD)" },
       { slug: "ssd", name: "Solid State Drives (SSD)" },
@@ -68,7 +69,7 @@ export const categories: Category[] = [
     name: "Memory (RAM)",
     short: "Memory",
     description: "Server memory modules and RAID controller cache memory.",
-    image: img.ram,
+    image: { src: "/images/products/m393a4k40db2-cvf.jpg" },
     children: [
       { slug: "server-memory", name: "Server Memory" },
       { slug: "cache-memory", name: "Cache Memory" },
@@ -98,7 +99,7 @@ export const categories: Category[] = [
     name: "Servers & Workstations",
     short: "Servers",
     description: "Rack servers, business laptops and mobile workstations, new and refurbished.",
-    image: img.server,
+    image: { src: "/images/products/868703-b21.png" },
     children: [
       { slug: "rack-servers", name: "Rack Servers" },
       { slug: "laptops-workstations", name: "Laptops & Workstations" },
@@ -109,7 +110,7 @@ export const categories: Category[] = [
     name: "Networking Equipment",
     short: "Networking",
     description: "Switches and routers for offices, branches and data centers.",
-    image: img.switch,
+    image: { src: "/images/products/jl253a.png" },
     children: [
       { slug: "switches", name: "Switches" },
       { slug: "routers", name: "Routers" },
@@ -120,7 +121,7 @@ export const categories: Category[] = [
     name: "Power Supplies",
     short: "Power",
     description: "Server power supplies, AC-DC adaptors and power inverters.",
-    image: img.psu,
+    image: { src: "/images/products/450-aebn.jpg" },
     children: [
       { slug: "server-power-supplies", name: "Server Power Supplies" },
       { slug: "adaptors", name: "AC-DC Adaptors" },
@@ -132,7 +133,7 @@ export const categories: Category[] = [
     name: "Storage Arrays",
     short: "Storage",
     description: "NAS systems and SAN storage arrays for backup, file sharing and virtualisation.",
-    image: img.san,
+    image: { src: "/images/products/rs1221-plus.webp" },
     children: [
       { slug: "nas", name: "NAS Systems" },
       { slug: "san", name: "SAN Storage" },
@@ -156,23 +157,28 @@ export const categories: Category[] = [
 // Brands
 // ---------------------------------------------------------------------------
 
-export type Brand = { slug: string; name: string; featured?: boolean };
+/**
+ * `logo`: monochrome SVG in /public/brands (Simple Icons artwork, viewBox cropped to the mark;
+ * the trademarks belong to their owners). `wordmark`: the logo spells the name, so it is shown
+ * on its own; symbol-only logos are shown with the name beside them.
+ */
+export type Brand = { slug: string; name: string; featured?: boolean; logo?: string; wordmark?: boolean };
 
 export const brands: Brand[] = [
-  { slug: "dell", name: "Dell", featured: true },
-  { slug: "hp", name: "HP", featured: true },
-  { slug: "ibm", name: "IBM", featured: true },
-  { slug: "cisco", name: "Cisco", featured: true },
-  { slug: "seagate", name: "Seagate", featured: true },
-  { slug: "western-digital", name: "Western Digital", featured: true },
-  { slug: "intel", name: "Intel" },
-  { slug: "samsung", name: "Samsung" },
-  { slug: "kingston", name: "Kingston" },
-  { slug: "supermicro", name: "Supermicro" },
-  { slug: "synology", name: "Synology" },
+  { slug: "dell", name: "Dell", featured: true, logo: "/brands/dell.svg", wordmark: true },
+  { slug: "hp", name: "HP", featured: true, logo: "/brands/hp.svg", wordmark: true },
+  { slug: "ibm", name: "IBM", featured: true, logo: "/brands/ibm.svg", wordmark: true },
+  { slug: "cisco", name: "Cisco", featured: true, logo: "/brands/cisco.svg", wordmark: true },
+  { slug: "seagate", name: "Seagate", featured: true, logo: "/brands/seagate.svg" },
+  { slug: "western-digital", name: "Western Digital", featured: true, logo: "/brands/western-digital.svg" },
+  { slug: "intel", name: "Intel", logo: "/brands/intel.svg", wordmark: true },
+  { slug: "samsung", name: "Samsung", logo: "/brands/samsung.svg", wordmark: true },
+  { slug: "kingston", name: "Kingston", logo: "/brands/kingston.svg" },
+  { slug: "supermicro", name: "Supermicro", logo: "/brands/supermicro.svg", wordmark: true },
+  { slug: "synology", name: "Synology", logo: "/brands/synology.svg", wordmark: true },
   { slug: "aruba", name: "Aruba" },
-  { slug: "zebra", name: "Zebra" },
-  { slug: "logitech", name: "Logitech" },
+  { slug: "zebra", name: "Zebra", logo: "/brands/zebra.svg", wordmark: true },
+  { slug: "logitech", name: "Logitech", logo: "/brands/logitech.svg" },
   { slug: "trendnet", name: "TRENDnet" },
   { slug: "generic", name: "Generic" },
 ];
@@ -256,19 +262,19 @@ function inCategory(category: string, prefix: string, seeds: Seed[]): Product[] 
 
 export const products: Product[] = [
   ...inCategory("hard-drives", "HDD", [
-    { name: "Seagate Constellation ES 500GB 7200RPM SATA 6Gb/s 3.5\" Hard Drive", brand: "seagate", mpn: "ST500NM0011", child: "hdd", image: img.hdd, price: 49, compareAt: 59, condition: "Refurbished", summary: "Enterprise-class 500GB SATA drive for servers and storage systems that run around the clock.", featured: true,
+    { name: "Seagate Constellation ES 500GB 7200RPM SATA 6Gb/s 3.5\" Hard Drive", brand: "seagate", mpn: "ST500NM0011", child: "hdd", image: { src: "/images/products/st500nm0011.jpg" }, price: 49, compareAt: 59, condition: "Refurbished", summary: "Enterprise-class 500GB SATA drive for servers and storage systems that run around the clock.", featured: true,
       specs: [["Capacity", "500GB"], ["Interface", "SATA 6Gb/s"], ["Spindle speed", "7200 RPM"], ["Form factor", "3.5-inch"], ["Cache", "64MB"]] },
-    { name: "Seagate Exos 7E8 4TB 7200RPM SATA 6Gb/s 3.5\" Hard Drive", brand: "seagate", mpn: "ST4000NM000A", child: "hdd", image: img.hdd, price: 129, condition: "New", summary: "High-capacity enterprise drive for bulk storage, backup and NAS arrays.",
+    { name: "Seagate Exos 7E8 4TB 7200RPM SATA 6Gb/s 3.5\" Hard Drive", brand: "seagate", mpn: "ST4000NM000A", child: "hdd", image: { src: "/images/products/st4000nm000a.jpg" }, price: 129, condition: "New", summary: "High-capacity enterprise drive for bulk storage, backup and NAS arrays.",
       specs: [["Capacity", "4TB"], ["Interface", "SATA 6Gb/s"], ["Spindle speed", "7200 RPM"], ["Form factor", "3.5-inch"], ["Cache", "256MB"]] },
     { name: "Western Digital Ultrastar DC HC320 8TB 7200RPM SAS 12Gb/s Hard Drive", brand: "western-digital", mpn: "HUS728T8TAL5204", child: "hdd", image: img.hdd, price: 189, compareAt: 219, condition: "Refurbished", summary: "8TB SAS drive built for data center workloads and high-availability arrays.", featured: true,
       specs: [["Capacity", "8TB"], ["Interface", "SAS 12Gb/s"], ["Spindle speed", "7200 RPM"], ["Form factor", "3.5-inch"], ["Cache", "256MB"]] },
-    { name: "Dell 1.2TB 10K RPM SAS 12Gb/s 2.5\" Hot-Plug Hard Drive", brand: "dell", mpn: "400-AJPI", child: "hdd", image: img.hdd, price: 89, condition: "Refurbished", summary: "Hot-plug SAS drive for Dell PowerEdge servers, supplied with tray.",
+    { name: "Dell 1.2TB 10K RPM SAS 12Gb/s 2.5\" Hot-Plug Hard Drive", brand: "dell", mpn: "400-AJPI", child: "hdd", image: { src: "/images/products/400-ajpi.jpg" }, price: 89, condition: "Refurbished", summary: "Hot-plug SAS drive for Dell PowerEdge servers, supplied with tray.",
       specs: [["Capacity", "1.2TB"], ["Interface", "SAS 12Gb/s"], ["Spindle speed", "10,000 RPM"], ["Form factor", "2.5-inch"], ["Tray", "Included"]] },
-    { name: "HP 600GB 10K RPM SAS 6Gb/s 2.5\" SFF Hard Drive", brand: "hp", mpn: "652583-B21", child: "hdd", image: img.hdd, price: 59, condition: "Refurbished", stock: "low", summary: "SFF SAS drive for HP ProLiant Gen8 and Gen9 servers, with SmartCarrier.",
+    { name: "HP 600GB 10K RPM SAS 6Gb/s 2.5\" SFF Hard Drive", brand: "hp", mpn: "652583-B21", child: "hdd", image: { src: "/images/products/652583-b21.jpg" }, price: 59, condition: "Refurbished", stock: "low", summary: "SFF SAS drive for HP ProLiant Gen8 and Gen9 servers, with SmartCarrier.",
       specs: [["Capacity", "600GB"], ["Interface", "SAS 6Gb/s"], ["Spindle speed", "10,000 RPM"], ["Form factor", "2.5-inch SFF"], ["Tray", "Included"]] },
-    { name: "IBM 900GB 10K RPM SAS 6Gb/s 2.5\" Hard Drive", brand: "ibm", mpn: "00AJ081", child: "hdd", image: img.hdd, price: 79, condition: "Refurbished", stock: "out", summary: "2.5-inch SAS drive for IBM System x servers.",
+    { name: "IBM 900GB 10K RPM SAS 6Gb/s 2.5\" Hard Drive", brand: "ibm", mpn: "00AJ081", child: "hdd", image: { src: "/images/products/00aj081.jpg" }, price: 79, condition: "Refurbished", stock: "out", summary: "2.5-inch SAS drive for IBM System x servers.",
       specs: [["Capacity", "900GB"], ["Interface", "SAS 6Gb/s"], ["Spindle speed", "10,000 RPM"], ["Form factor", "2.5-inch"], ["Tray", "Included"]] },
-    { name: "Samsung PM883 960GB SATA 6Gb/s 2.5\" Enterprise SSD", brand: "samsung", mpn: "MZ7LH960HAJR", child: "ssd", image: img.ssd, price: 149, condition: "New", summary: "Data center SATA SSD with power-loss protection for read-intensive workloads.", featured: true,
+    { name: "Samsung PM883 960GB SATA 6Gb/s 2.5\" Enterprise SSD", brand: "samsung", mpn: "MZ7LH960HAJR", child: "ssd", image: { src: "/images/products/mz7lh960hajr.jpg" }, price: 149, condition: "New", summary: "Data center SATA SSD with power-loss protection for read-intensive workloads.", featured: true,
       specs: [["Capacity", "960GB"], ["Interface", "SATA 6Gb/s"], ["Form factor", "2.5-inch, 7mm"], ["NAND", "V-NAND TLC"], ["Endurance", "1.3 DWPD"]] },
     { name: "Intel D3-S4510 480GB SATA 6Gb/s 2.5\" SSD", brand: "intel", mpn: "SSDSC2KB480G801", child: "ssd", image: img.ssd, price: 99, condition: "Refurbished", summary: "Reliable boot and read-intensive SSD for servers.",
       specs: [["Capacity", "480GB"], ["Interface", "SATA 6Gb/s"], ["Form factor", "2.5-inch, 7mm"], ["NAND", "3D TLC"]] },
@@ -278,13 +284,13 @@ export const products: Product[] = [
       specs: [["Capacity", "1TB"], ["Interface", "SATA 6Gb/s"], ["Form factor", "2.5-inch, 7mm"], ["Read speed", "Up to 560MB/s"]] },
   ]),
   ...inCategory("memory", "MEM", [
-    { name: "Samsung 32GB DDR4-2933 ECC Registered RDIMM", brand: "samsung", mpn: "M393A4K40DB2-CVF", child: "server-memory", image: img.ram, price: 89, condition: "New", summary: "32GB dual-rank registered memory for current Intel and AMD servers.", featured: true,
+    { name: "Samsung 32GB DDR4-2933 ECC Registered RDIMM", brand: "samsung", mpn: "M393A4K40DB2-CVF", child: "server-memory", image: { src: "/images/products/m393a4k40db2-cvf.jpg" }, price: 89, condition: "New", summary: "32GB dual-rank registered memory for current Intel and AMD servers.", featured: true,
       specs: [["Capacity", "32GB"], ["Type", "DDR4 RDIMM"], ["Speed", "2933 MT/s"], ["ECC", "Yes, registered"], ["Rank", "2Rx4"]] },
-    { name: "Kingston 16GB DDR4-2666 ECC Registered RDIMM", brand: "kingston", mpn: "KSM26RS4/16HDI", child: "server-memory", image: img.ram, price: 59, compareAt: 69, condition: "New", summary: "Server Premier memory module, validated for leading server boards.",
+    { name: "Kingston 16GB DDR4-2666 ECC Registered RDIMM", brand: "kingston", mpn: "KSM26RS4/16HDI", child: "server-memory", image: { src: "/images/products/ksm26rs4-16hdi.jpg" }, price: 59, compareAt: 69, condition: "New", summary: "Server Premier memory module, validated for leading server boards.",
       specs: [["Capacity", "16GB"], ["Type", "DDR4 RDIMM"], ["Speed", "2666 MT/s"], ["ECC", "Yes, registered"], ["Rank", "1Rx4"]] },
     { name: "HP 64GB DDR4-2933 Load-Reduced LRDIMM", brand: "hp", mpn: "P00930-B21", child: "server-memory", image: img.ram, price: 189, condition: "Refurbished", stock: "low", summary: "High-density LRDIMM for HPE ProLiant Gen10 servers.",
       specs: [["Capacity", "64GB"], ["Type", "DDR4 LRDIMM"], ["Speed", "2933 MT/s"], ["ECC", "Yes"], ["Rank", "2Rx4"]] },
-    { name: "Dell 16GB DDR4-2400 ECC Registered RDIMM", brand: "dell", mpn: "A8711887", child: "server-memory", image: img.ram, price: 45, condition: "Refurbished", summary: "Memory upgrade for PowerEdge 13th and 14th generation servers.",
+    { name: "Dell 16GB DDR4-2400 ECC Registered RDIMM", brand: "dell", mpn: "A8711887", child: "server-memory", image: { src: "/images/products/a8711887.jpg" }, price: 45, condition: "Refurbished", summary: "Memory upgrade for PowerEdge 13th and 14th generation servers.",
       specs: [["Capacity", "16GB"], ["Type", "DDR4 RDIMM"], ["Speed", "2400 MT/s"], ["ECC", "Yes, registered"], ["Rank", "2Rx8"]] },
     { name: "HP 1GB Flash-Backed Write Cache Module", brand: "hp", mpn: "633542-001", child: "cache-memory", image: img.cacheMemory, price: 89, condition: "Refurbished", summary: "1GB flash-backed write cache for Smart Array P420 and P421 controllers.", featured: true,
       specs: [["Capacity", "1GB"], ["Type", "Flash-backed write cache"], ["Compatible with", "Smart Array P420 / P421"]] },
@@ -320,7 +326,7 @@ export const products: Product[] = [
   ...inCategory("servers-workstations", "SRV", [
     { name: "Dell PowerEdge R640 1U Rack Server", brand: "dell", mpn: "R640-CTO", child: "rack-servers", image: img.server, price: 1899, compareAt: 2149, condition: "Refurbished", summary: "Dense 1U two-socket server for virtualisation and databases, configured to order.", featured: true,
       specs: [["Form factor", "1U rack"], ["Processors", "Up to 2 × Xeon Scalable"], ["Memory", "Up to 24 DIMMs"], ["Drive bays", "10 × 2.5-inch"], ["Power", "Dual redundant PSUs"]] },
-    { name: "HPE ProLiant DL380 Gen10 2U Rack Server", brand: "hp", mpn: "868703-B21", child: "rack-servers", image: img.server, price: 2499, condition: "Refurbished", stock: "low", summary: "The versatile 2U workhorse for mixed workloads.",
+    { name: "HPE ProLiant DL380 Gen10 2U Rack Server", brand: "hp", mpn: "868703-B21", child: "rack-servers", image: { src: "/images/products/868703-b21.png" }, price: 2499, condition: "Refurbished", stock: "low", summary: "The versatile 2U workhorse for mixed workloads.",
       specs: [["Form factor", "2U rack"], ["Processors", "Up to 2 × Xeon Scalable"], ["Memory", "Up to 24 DIMMs"], ["Drive bays", "8 × SFF (expandable)"], ["Power", "Dual redundant PSUs"]] },
     { name: "Dell PowerEdge R740 2U Rack Server", brand: "dell", mpn: "R740-CTO", child: "rack-servers", image: img.server, price: 2899, condition: "Refurbished", stock: "out", summary: "2U server with room for GPUs and large storage.",
       specs: [["Form factor", "2U rack"], ["Processors", "Up to 2 × Xeon Scalable"], ["Memory", "Up to 24 DIMMs"], ["Drive bays", "Up to 16 × 2.5-inch"]] },
@@ -336,7 +342,7 @@ export const products: Product[] = [
       specs: [["Ports", "48 × 1GbE + 4 × SFP"], ["Layer", "Layer 2 managed"], ["Form factor", "1U rack"], ["Power", "Internal AC"]] },
     { name: "Cisco Catalyst 9200L 24-Port Gigabit Switch", brand: "cisco", mpn: "C9200L-24T-4G-E", child: "switches", image: img.switch, price: 899, condition: "New", stock: "low", summary: "Current-generation stackable access switch for growing offices.",
       specs: [["Ports", "24 × 1GbE + 4 × 1G SFP"], ["Layer", "Layer 3 lite"], ["Form factor", "1U rack"]] },
-    { name: "Aruba 2930F 24G 4SFP+ Managed Switch", brand: "aruba", mpn: "JL253A", child: "switches", image: img.switch, price: 699, condition: "Refurbished", summary: "Layer 3 access switch with 10G SFP+ uplinks.",
+    { name: "Aruba 2930F 24G 4SFP+ Managed Switch", brand: "aruba", mpn: "JL253A", child: "switches", image: { src: "/images/products/jl253a.png" }, price: 699, condition: "Refurbished", summary: "Layer 3 access switch with 10G SFP+ uplinks.",
       specs: [["Ports", "24 × 1GbE + 4 × SFP+"], ["Layer", "Layer 3"], ["Form factor", "1U rack"]] },
     { name: "Cisco ISR 4331 Integrated Services Router", brand: "cisco", mpn: "ISR4331/K9", child: "routers", image: img.router, price: 899, condition: "Refurbished", summary: "Branch router with integrated security and three WAN/LAN ports.", featured: true,
       specs: [["WAN / LAN ports", "3 × GbE"], ["Throughput", "Up to 100 Mbps (300 Mbps with licence)"], ["Form factor", "1U rack"]] },
@@ -344,9 +350,9 @@ export const products: Product[] = [
       specs: [["WAN ports", "2 × GbE"], ["LAN ports", "4 × GbE"], ["VPN", "IPsec, SSL"]] },
   ]),
   ...inCategory("power-supplies", "PWR", [
-    { name: "Dell 750W Hot-Plug Redundant Power Supply", brand: "dell", mpn: "450-AEBN", child: "server-power-supplies", image: img.psu, price: 79, condition: "Refurbished", summary: "Hot-plug 750W PSU for PowerEdge 13th and 14th generation servers.", featured: true,
+    { name: "Dell 750W Hot-Plug Redundant Power Supply", brand: "dell", mpn: "450-AEBN", child: "server-power-supplies", image: { src: "/images/products/450-aebn.jpg" }, price: 79, condition: "Refurbished", summary: "Hot-plug 750W PSU for PowerEdge 13th and 14th generation servers.", featured: true,
       specs: [["Output", "750W"], ["Efficiency", "80 PLUS Platinum"], ["Type", "Hot-plug, redundant"]] },
-    { name: "HP 800W Flex Slot Platinum Hot-Plug Power Supply", brand: "hp", mpn: "720479-B21", child: "server-power-supplies", image: img.psu, price: 89, compareAt: 99, condition: "Refurbished", summary: "Flex Slot PSU for ProLiant Gen9 and Gen10 servers.",
+    { name: "HP 800W Flex Slot Platinum Hot-Plug Power Supply", brand: "hp", mpn: "720479-B21", child: "server-power-supplies", image: { src: "/images/products/720479-b21.jpg" }, price: 89, compareAt: 99, condition: "Refurbished", summary: "Flex Slot PSU for ProLiant Gen9 and Gen10 servers.",
       specs: [["Output", "800W"], ["Efficiency", "80 PLUS Platinum"], ["Type", "Flex Slot, hot-plug"]] },
     { name: "AC-DC Desktop Power Adaptor 12V 5A 60W", brand: "generic", mpn: "ADP-12V5A", child: "adaptors", image: img.adaptor, price: 24, condition: "New", summary: "60W desktop power supply for routers, switches and embedded devices.",
       specs: [["Output", "12V DC, 5A (60W)"], ["Input", "100–240V AC"], ["Protection", "Over-voltage, short-circuit"]] },
@@ -358,9 +364,9 @@ export const products: Product[] = [
       specs: [["Continuous output", "2000W"], ["Input", "12V DC"], ["Output", "120V AC"], ["Protection", "Overload, thermal"]] },
   ]),
   ...inCategory("storage-arrays", "STO", [
-    { name: "Synology DiskStation DS920+ 4-Bay NAS", brand: "synology", mpn: "DS920+", child: "nas", image: img.nas, price: 549, condition: "New", summary: "Four-bay NAS for file sharing, backup and surveillance in small offices.", featured: true,
+    { name: "Synology DiskStation DS920+ 4-Bay NAS", brand: "synology", mpn: "DS920+", child: "nas", image: { src: "/images/products/ds920-plus.webp" }, price: 549, condition: "New", summary: "Four-bay NAS for file sharing, backup and surveillance in small offices.", featured: true,
       specs: [["Drive bays", "4 × 3.5/2.5-inch"], ["Memory", "4GB (expandable)"], ["Network", "2 × 1GbE"], ["Drives", "Not included"]] },
-    { name: "Synology RackStation RS1221+ 8-Bay Rack NAS", brand: "synology", mpn: "RS1221+", child: "nas", image: img.san, price: 1099, condition: "New", stock: "low", summary: "Eight-bay 2U rack NAS for growing businesses.",
+    { name: "Synology RackStation RS1221+ 8-Bay Rack NAS", brand: "synology", mpn: "RS1221+", child: "nas", image: { src: "/images/products/rs1221-plus.webp" }, price: 1099, condition: "New", stock: "low", summary: "Eight-bay 2U rack NAS for growing businesses.",
       specs: [["Drive bays", "8 × 3.5/2.5-inch"], ["Memory", "4GB (expandable)"], ["Network", "4 × 1GbE"], ["Form factor", "2U rack"]] },
     { name: "Dell PowerVault ME4012 SAN Storage Array", brand: "dell", mpn: "ME4012", child: "san", image: img.san, price: 3499, condition: "Refurbished", stock: "out", summary: "12-bay SAN array with dual controllers for shared virtualisation storage.",
       specs: [["Drive bays", "12 × 3.5-inch"], ["Controllers", "Dual, active/active"], ["Host interface", "12Gb SAS / 16Gb FC / iSCSI"], ["Form factor", "2U rack"]] },

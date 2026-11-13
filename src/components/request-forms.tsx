@@ -172,7 +172,18 @@ const positiveNumber = (label: string) => (value: string) =>
   /^\d+(\.\d{1,2})?$/.test(value.replace(/,/g, "")) && Number(value.replace(/,/g, "")) > 0 ? null : `Enter ${label} as a number.`;
 
 /** "Add to Quote" button + dialog on the product page (opens automatically for #quote links). */
-export function QuoteRequest({ product, prominent = false }: { product: Product; prominent?: boolean }) {
+export function QuoteRequest({
+  product,
+  prominent = false,
+  className,
+  label = "Request a quote",
+}: {
+  product: Product;
+  prominent?: boolean;
+  /** Replaces the default full-width button styling of the trigger. */
+  className?: string;
+  label?: string;
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
@@ -199,10 +210,10 @@ export function QuoteRequest({ product, prominent = false }: { product: Product;
           setOpen(true);
         }}
         aria-haspopup="dialog"
-        className={`${prominent ? btnPrimary : btnOutline} min-h-12 w-full`}
+        className={className ?? `${prominent ? btnPrimary : btnOutline} min-h-12 w-full`}
       >
         <FileText aria-hidden="true" className="size-[18px]" />
-        Add to Quote
+        {label}
       </button>
       <dialog
         ref={dialogRef}

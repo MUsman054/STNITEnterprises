@@ -28,7 +28,7 @@ export function ListingHeader({
         <div className="relative p-6 sm:p-9">
           <h1 className="text-[26px] leading-tight font-bold sm:text-[36px]">{title}</h1>
           {description && <p className="mt-2 max-w-2xl text-[16px] text-[#c9cfd5]">{description}</p>}
-          {stat && <p className="mt-4 inline-flex rounded-full bg-lime px-3.5 py-1.5 text-[14px] font-bold text-ink">{stat}</p>}
+          {stat && <p className="mt-4 text-[15px] font-semibold text-lime">{stat}</p>}
         </div>
         {image && (
           <div className="relative mx-auto mb-6 size-32 overflow-hidden rounded-2xl bg-white sm:mr-9 sm:mb-0 sm:size-40">

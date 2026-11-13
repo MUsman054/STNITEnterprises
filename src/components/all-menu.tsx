@@ -2,26 +2,31 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ChevronRight, X } from "lucide-react";
-import { brands, categories, getCategory } from "@/lib/catalog";
-import { accountNav, site, supportNav } from "@/lib/site";
+import { ArrowLeft, ChevronRight, CircleUserRound, Heart, LayoutGrid, Phone, Tag, X } from "lucide-react";
+import { brands, categories } from "@/lib/catalog";
+import { site, supportNav } from "@/lib/site";
 import { LogoLockup } from "@/components/logo";
 import { ProductImage } from "@/components/product-image";
 
-type Panel = { kind: "main" } | { kind: "category"; slug: string } | { kind: "brands" } | { kind: "support" } | { kind: "account" };
+type Panel = "main" | "categories" | "brands" | "support";
+
+const titles: Record<Exclude<Panel, "main">, string> = {
+  categories: "Shop by category",
+  brands: "Brands",
+  support: "Support",
+};
 
 /**
- * Slide-in menu (phones and tablets). The main panel lists the top-level menu; categories,
- * brands, support and account open a second panel that slides in. Native <dialog> gives the
- * focus trap and Escape-to-close.
+ * Slide-in menu (phones and tablets). The main panel is short on purpose: three shortcuts and
+ * a handful of rows. Categories, brands and support each open one second-level panel, where
+ * categories show as a picture grid. Native <dialog> gives the focus trap and Escape-to-close.
  */
 export function AllMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
-  const triggers = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [panel, setPanel] = useState<Panel>({ kind: "main" });
-  const panelKey = panel.kind === "category" ? `category:${panel.slug}` : panel.kind;
+  const triggers = useRef<Partial<Record<Panel, HTMLButtonElement | null>>>({});
+  const [panel, setPanel] = useState<Panel>("main");
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -38,36 +43,37 @@ export function AllMenu({ open, onClose }: { open: boolean; onClose: () => void 
     requestAnimationFrame(() => backRef.current?.focus());
   };
   const back = () => {
-    const previous = panelKey;
-    setPanel({ kind: "main" });
+    const previous = panel;
+    setPanel("main");
     requestAnimationFrame(() => triggers.current[previous]?.focus());
   };
   const handleClose = () => {
     onClose();
-    setPanel({ kind: "main" });
+    setPanel("main");
   };
 
-  const sectionTitle = "px-5 pt-5 pb-2 text-[12px] font-bold tracking-wider text-muted-foreground uppercase";
   const row =
-    "flex min-h-12 w-full items-center justify-between gap-3 px-5 text-left text-[15px] text-foreground transition-colors duration-150 hover:bg-surface";
+    "flex min-h-13 w-full items-center justify-between gap-3 px-5 text-left text-[16px] font-medium text-foreground transition-colors duration-150 hover:bg-surface";
 
-  const subButton = (key: string, label: string, next: Panel) => (
+  const subButton = (key: Exclude<Panel, "main">, label: string, icon?: React.ReactNode) => (
     <button
       ref={(node) => {
         triggers.current[key] = node;
       }}
       type="button"
-      onClick={() => openPanel(next)}
+      onClick={() => openPanel(key)}
       className={row}
     >
-      {label}
+      <span className="flex items-center gap-3">
+        {icon}
+        {label}
+      </span>
       <ChevronRight aria-hidden="true" className="size-5 text-muted-foreground" />
     </button>
   );
 
-  const category = panel.kind === "category" ? getCategory(panel.slug) : undefined;
-  const subTitle =
-    panel.kind === "category" ? category?.name : panel.kind === "brands" ? "Brands" : panel.kind === "support" ? "Support" : panel.kind === "account" ? "My Account" : "";
+  const shortcut =
+    "flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-xl border border-border text-[13px] font-semibold text-foreground transition-colors duration-150 hover:border-primary hover:bg-primary-soft";
 
   return (
     <dialog
@@ -98,138 +104,140 @@ export function AllMenu({ open, onClose }: { open: boolean; onClose: () => void 
           {/* Main panel */}
           <nav
             aria-label="Main menu"
-            inert={panel.kind !== "main"}
-            className={`absolute inset-0 overflow-y-auto overscroll-contain transition-[translate] duration-300 ease-[var(--ease-out-soft)] ${
-              panel.kind === "main" ? "translate-x-0" : "-translate-x-full"
+            inert={panel !== "main"}
+            className={`absolute inset-0 flex flex-col overflow-y-auto overscroll-contain transition-[translate] duration-300 ease-[var(--ease-out-soft)] ${
+              panel === "main" ? "translate-x-0" : "-translate-x-full"
             }`}
           >
-            <ul className="pt-2">
+            <ul className="grid grid-cols-3 gap-2 p-4">
               <li>
-                <Link href="/" onClick={handleClose} className={row}>
-                  Home
+                <Link href="/deals" onClick={handleClose} className={shortcut}>
+                  <Tag aria-hidden="true" className="size-5 text-primary" />
+                  Deals
                 </Link>
               </li>
               <li>
-                <Link href="/deals" onClick={handleClose} className={`${row} font-semibold text-primary`}>
-                  Deals &amp; Special Offers
+                <Link href="/wishlist" onClick={handleClose} className={shortcut}>
+                  <Heart aria-hidden="true" className="size-5 text-primary" />
+                  Wishlist
                 </Link>
               </li>
-            </ul>
-
-            <p className={sectionTitle}>Shop categories</p>
-            <ul>
-              {categories.map((item) => (
-                <li key={item.slug}>{subButton(`category:${item.slug}`, item.name, { kind: "category", slug: item.slug })}</li>
-              ))}
               <li>
-                <Link href="/shop" onClick={handleClose} className={`${row} font-semibold`}>
-                  All products
+                <Link href="/account" onClick={handleClose} className={shortcut}>
+                  <CircleUserRound aria-hidden="true" className="size-5 text-primary" />
+                  Account
                 </Link>
               </li>
             </ul>
 
-            <div className="mt-2 border-t border-border pb-6">
-              <ul className="pt-2">
-                <li>{subButton("brands", "Brands", { kind: "brands" })}</li>
-                <li>
-                  <Link href="/about-us" onClick={handleClose} className={row}>
-                    About Us
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contact-us" onClick={handleClose} className={row}>
-                    Contact Us
-                  </Link>
-                </li>
-                <li>{subButton("support", "Support", { kind: "support" })}</li>
-                <li>{subButton("account", "My Account", { kind: "account" })}</li>
-              </ul>
-              <p className="px-5 pt-4 text-sm text-muted-foreground">
-                Sales:{" "}
-                <a href={site.contact.phoneHref} className="font-semibold text-primary hover:underline">
-                  {site.contact.phone}
-                </a>
-              </p>
+            <ul className="border-t border-border py-2">
+              <li>{subButton("categories", "Shop by category", <LayoutGrid aria-hidden="true" className="size-5 text-primary" />)}</li>
+              <li>{subButton("brands", "Brands")}</li>
+              <li>
+                <Link href="/about-us" onClick={handleClose} className={row}>
+                  About us
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact-us" onClick={handleClose} className={row}>
+                  Contact us
+                </Link>
+              </li>
+              <li>{subButton("support", "Support")}</li>
+            </ul>
+
+            <div className="mt-auto border-t border-border p-4">
+              <a
+                href={site.contact.phoneHref}
+                className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-nav text-[15px] font-semibold text-white transition-colors duration-150 hover:bg-nav-2"
+              >
+                <Phone aria-hidden="true" className="size-4 text-lime" />
+                Call sales {site.contact.phone}
+              </a>
             </div>
           </nav>
 
-          {/* Sub panel */}
+          {/* Second-level panel */}
           <nav
-            aria-label={subTitle || "Submenu"}
-            inert={panel.kind === "main"}
+            aria-label={panel === "main" ? "Submenu" : titles[panel]}
+            inert={panel === "main"}
             className={`absolute inset-0 overflow-y-auto overscroll-contain bg-background transition-[translate] duration-300 ease-[var(--ease-out-soft)] ${
-              panel.kind === "main" ? "translate-x-full" : "translate-x-0"
+              panel === "main" ? "translate-x-full" : "translate-x-0"
             }`}
           >
-            {panel.kind !== "main" && (
+            {panel !== "main" && (
               <>
-                <button
-                  ref={backRef}
-                  type="button"
-                  onClick={back}
-                  className="flex min-h-14 w-full items-center gap-3 border-b border-border px-5 text-[15px] font-semibold text-foreground transition-colors duration-150 hover:bg-surface"
-                >
-                  <ArrowLeft aria-hidden="true" className="size-5" />
-                  Main menu
-                </button>
-                <p className={sectionTitle}>{subTitle}</p>
+                <div className="sticky top-0 z-10 flex items-center gap-1 border-b border-border bg-background px-2">
+                  <button
+                    ref={backRef}
+                    type="button"
+                    onClick={back}
+                    aria-label="Back to main menu"
+                    className="grid size-12 place-items-center rounded-full text-foreground transition-colors duration-150 hover:bg-surface"
+                  >
+                    <ArrowLeft aria-hidden="true" className="size-5" />
+                  </button>
+                  <p className="text-[16px] font-bold text-foreground">{titles[panel]}</p>
+                </div>
 
-                {category && (
-                  <ul>
-                    <li>
-                      <Link href={`/category/${category.slug}`} onClick={handleClose} className={`${row} py-2 font-semibold`}>
-                        <span className="flex items-center gap-3">
-                          <ProductImage image={category.image} alt="" sizes="44px" zoom={false} className="size-11 shrink-0 rounded-lg bg-surface" />
-                          Shop all {category.short}
-                        </span>
-                      </Link>
-                    </li>
-                    {category.children.map((child) => (
-                      <li key={child.slug}>
-                        <Link href={`/category/${category.slug}/${child.slug}`} onClick={handleClose} className={row}>
-                          {child.name}
-                          <ChevronRight aria-hidden="true" className="size-5 text-muted-foreground" />
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
+                {panel === "categories" && (
+                  <div className="p-4">
+                    <ul className="grid grid-cols-2 gap-2">
+                      {categories.map((category) => (
+                        <li key={category.slug}>
+                          <Link
+                            href={`/category/${category.slug}`}
+                            onClick={handleClose}
+                            className="flex h-full flex-col items-center gap-2 rounded-xl border border-border p-2.5 text-center text-[14px] leading-tight font-semibold text-foreground transition-colors duration-150 hover:border-primary hover:bg-primary-soft"
+                          >
+                            <ProductImage image={category.image} alt="" sizes="120px" zoom={false} className="aspect-[2/1] w-full rounded-lg bg-surface" />
+                            {category.short}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      href="/shop"
+                      onClick={handleClose}
+                      className="mt-3 flex min-h-12 items-center justify-center rounded-xl bg-primary text-[15px] font-semibold text-white transition-colors duration-150 hover:bg-primary-hover"
+                    >
+                      Browse all products
+                    </Link>
+                  </div>
                 )}
 
-                {panel.kind === "brands" && (
-                  <ul>
-                    {brands.map((brand) => (
-                      <li key={brand.slug}>
-                        <Link href={`/brand/${brand.slug}`} onClick={handleClose} className={row}>
-                          {brand.name}
-                        </Link>
-                      </li>
-                    ))}
-                    <li>
-                      <Link href="/brands" onClick={handleClose} className={`${row} font-semibold text-primary`}>
-                        All brands
-                      </Link>
-                    </li>
-                  </ul>
+                {panel === "brands" && (
+                  <div className="p-4">
+                    <ul className="grid grid-cols-2 gap-2">
+                      {brands.map((brand) => (
+                        <li key={brand.slug}>
+                          <Link
+                            href={`/brand/${brand.slug}`}
+                            onClick={handleClose}
+                            className="flex min-h-12 items-center gap-2.5 rounded-xl border border-border px-3 text-[14px] font-semibold text-foreground transition-colors duration-150 hover:border-primary hover:bg-primary-soft"
+                          >
+                            <span className="truncate">{brand.name}</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      href="/brands"
+                      onClick={handleClose}
+                      className="mt-3 flex min-h-12 items-center justify-center rounded-xl border border-border text-[15px] font-semibold text-primary transition-colors duration-150 hover:bg-primary-soft"
+                    >
+                      All brands
+                    </Link>
+                  </div>
                 )}
 
-                {panel.kind === "support" && (
-                  <ul>
+                {panel === "support" && (
+                  <ul className="py-2">
                     {supportNav.map((item) => (
                       <li key={item.href}>
                         <Link href={item.href} onClick={handleClose} className={row}>
                           {item.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {panel.kind === "account" && (
-                  <ul>
-                    {accountNav.map((item) => (
-                      <li key={item.href}>
-                        <Link href={item.href} onClick={handleClose} className={row}>
-                          {item.label}
+                          <ChevronRight aria-hidden="true" className="size-5 text-muted-foreground" />
                         </Link>
                       </li>
                     ))}

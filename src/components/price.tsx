@@ -1,18 +1,16 @@
+import { discountPercent, type Product } from "@/lib/catalog";
 import { formatPrice } from "@/lib/site";
 
 type Size = "sm" | "md" | "lg" | "xl";
 
 const sizes: Record<Size, string> = {
-  sm: "text-lg",
-  md: "text-[22px]",
-  lg: "text-[28px]",
+  sm: "text-base",
+  md: "text-[19px]",
+  lg: "text-[26px]",
   xl: "text-[34px]",
 };
 
-/**
- * Marketplace-style price: small currency sign and cents, large dollars.
- * Screen readers get the plain formatted price instead of the split pieces.
- */
+/** Plain, full price ("$2,899.00") in tabular figures. */
 export function Price({
   amount,
   size = "md",
@@ -25,22 +23,40 @@ export function Price({
   /** Spoken before the price, e.g. "Sale price". */
   label?: string;
 }) {
-  const [whole, cents] = amount.toFixed(2).split(".");
-  const dollars = Number(whole).toLocaleString("en-US");
   return (
-    <span className={`inline-block ${className}`}>
-      <span className="sr-only">
-        {label ? `${label} ` : ""}
-        {formatPrice(amount)}
-      </span>
-      <span
-        aria-hidden="true"
-        className={`inline-flex items-start leading-none font-bold tracking-tight tabular-nums ${sizes[size]}`}
-      >
-        <span className="mt-[0.12em] text-[0.52em]">$</span>
-        <span>{dollars}</span>
-        <span className="mt-[0.12em] text-[0.52em]">{cents}</span>
-      </span>
+    <span className={`inline-block leading-none font-bold tracking-tight tabular-nums ${sizes[size]} ${className}`}>
+      {label && <span className="sr-only">{label} </span>}
+      {formatPrice(amount)}
     </span>
+  );
+}
+
+/**
+ * Price with the earlier price and saving, when there is one:
+ *   $29.00  [Save 17%]
+ *   was $35.00
+ * Savings use the brand green, not red.
+ */
+export function PriceStack({ product, size = "md", className = "" }: { product: Product; size?: Size; className?: string }) {
+  const discount = discountPercent(product);
+  const onSale = discount !== null && product.compareAt !== undefined;
+  const large = size === "lg" || size === "xl";
+
+  return (
+    <div className={className}>
+      <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+        <Price amount={product.price} size={size} label={onSale ? "Sale price" : undefined} className="text-foreground" />
+        {onSale && large && (
+          <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[13px] font-semibold text-primary">
+            Save {formatPrice(product.compareAt! - product.price)} ({discount}%)
+          </span>
+        )}
+      </p>
+      {onSale && (
+        <p className={`text-muted-foreground tabular-nums ${large ? "mt-2 text-[14px]" : "mt-1 text-[12px]"}`}>
+          was <s className="decoration-muted-foreground/60">{formatPrice(product.compareAt!)}</s>
+        </p>
+      )}
+    </div>
   );
 }

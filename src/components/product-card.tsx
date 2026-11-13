@@ -1,28 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Heart, Plus } from "lucide-react";
+import { Heart, Star } from "lucide-react";
 import { addToCart, removeFromCart, setCartQty, useCart } from "@/lib/cart-store";
 import { brandName, discountPercent, type Product } from "@/lib/catalog";
-import { formatPrice } from "@/lib/site";
 import { toggleWishlist, useWishlist } from "@/lib/wishlist-store";
-import { Price } from "@/components/price";
+import { PriceStack } from "@/components/price";
 import { ProductImage } from "@/components/product-image";
 import { QuantityStepper } from "@/components/quantity-stepper";
-import { Rating } from "@/components/rating";
 
-/** "+ Add" until the product is in the cart, then an inline quantity stepper. */
+/** Card purchase control: a plain "Add to cart" button, then a quantity stepper once added. */
 export function AddControl({ product }: { product: Product }) {
   const { qtyOf, hydrated } = useCart();
   const qty = hydrated ? qtyOf(product.slug) : 0;
 
+  const button =
+    "relative z-10 flex min-h-11 w-full items-center justify-center rounded-lg border border-foreground/20 px-3 text-[14px] font-semibold text-foreground transition-colors duration-200 hover:border-primary hover:bg-primary hover:text-white";
+
   if (product.stock === "out") {
     return (
-      <Link
-        href={`/product/${product.slug}#quote`}
-        className="relative z-10 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-foreground/25 px-4 text-[14px] font-semibold text-foreground transition-colors duration-200 hover:border-primary hover:text-primary"
-      >
-        <FileText aria-hidden="true" className="size-4" />
+      <Link href={`/product/${product.slug}#quote`} aria-label={`Request a quote for ${product.name}`} className={button}>
         Request a quote
       </Link>
     );
@@ -30,7 +27,7 @@ export function AddControl({ product }: { product: Product }) {
 
   if (qty > 0) {
     return (
-      <div className="animate-fade-in relative z-10">
+      <div className="animate-fade-in relative z-10 w-full">
         <QuantityStepper
           block
           size="sm"
@@ -44,14 +41,8 @@ export function AddControl({ product }: { product: Product }) {
   }
 
   return (
-    <button
-      type="button"
-      onClick={() => addToCart(product.slug, 1, "toast")}
-      aria-label={`Add ${product.name} to cart`}
-      className="relative z-10 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-[15px] font-semibold text-white transition-[background-color,translate] duration-200 hover:bg-primary-hover active:translate-y-px"
-    >
-      <Plus aria-hidden="true" className="size-[18px]" strokeWidth={2.5} />
-      Add
+    <button type="button" onClick={() => addToCart(product.slug, 1, "toast")} aria-label={`Add ${product.name} to cart`} className={button}>
+      Add to cart
     </button>
   );
 }
@@ -75,72 +66,82 @@ export function WishlistButton({ product, className = "" }: { product: Product; 
   );
 }
 
+/** Stock as a short coloured label. */
+export function StockLabel({ product, className = "" }: { product: Product; className?: string }) {
+  const state =
+    product.stock === "out"
+      ? { text: "text-sale", label: "Out of stock" }
+      : product.stock === "low"
+        ? { text: "text-amber-text", label: "Low stock" }
+        : { text: "text-primary", label: "In stock" };
+  return <span className={`font-semibold ${state.text} ${className}`}>{state.label}</span>;
+}
+
 export function ProductCard({ product, priority }: { product: Product; priority?: boolean }) {
   const discount = discountPercent(product);
   const out = product.stock === "out";
 
   return (
-    <article className="group relative flex h-full flex-col rounded-xl bg-background p-2.5 transition-shadow duration-300 hover:shadow-lift sm:p-3">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-background transition-[border-color,box-shadow] duration-300 hover:border-foreground/20 hover:shadow-lift">
       <div className="relative">
         <ProductImage
           image={product.image}
           alt=""
           priority={priority}
           sizes="(min-width: 1280px) 230px, (min-width: 640px) 30vw, 46vw"
-          className={`aspect-square rounded-lg bg-surface ${out ? "opacity-60" : ""}`}
+          className={`aspect-[5/4] bg-surface ${out ? "opacity-60" : ""}`}
         />
-        <div className="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-1">
-          {discount !== null && <span className="rounded-md bg-sale px-2 py-0.5 text-xs font-bold text-white">{discount}% off</span>}
-          {product.condition === "Refurbished" && (
-            <span className="rounded-md bg-background/95 px-2 py-0.5 text-xs font-semibold text-foreground shadow-card">Refurbished</span>
-          )}
-        </div>
+        <span className="pointer-events-none absolute top-2.5 left-2.5 rounded-full bg-background/95 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-foreground uppercase shadow-card">
+          {product.condition === "Refurbished" ? "Refurb" : "New"}
+        </span>
+        {discount !== null && (
+          <span className="pointer-events-none absolute bottom-2.5 left-2.5 rounded-full bg-nav px-2.5 py-1 text-[12px] font-bold text-lime tabular-nums">
+            −{discount}%
+          </span>
+        )}
         <WishlistButton product={product} className="absolute top-1 right-1 z-10 bg-background/80 backdrop-blur hover:bg-background" />
       </div>
 
-      <div className="mt-3 flex flex-1 flex-col px-0.5">
-        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <Price
-            amount={product.price}
-            size="md"
-            label={discount !== null ? "Sale price" : undefined}
-            className={discount !== null ? "text-sale" : "text-foreground"}
-          />
-          {product.compareAt && discount !== null && (
-            <span className="text-[13px] text-muted-foreground">
-              <span className="sr-only">Was </span>
-              <s>{formatPrice(product.compareAt)}</s>
-            </span>
-          )}
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
+        <p className="flex items-center justify-between gap-2 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+          <span className="truncate">{brandName(product.brand)}</span>
+          <span className="max-w-[55%] truncate font-mono tracking-normal normal-case" title={`Part # ${product.mpn}`}>
+            <span className="sr-only">Part number </span>
+            {product.mpn}
+          </span>
         </p>
 
-        <h3 className="mt-1.5 line-clamp-2 text-[14px] leading-snug font-normal tracking-normal text-foreground">
+        <h3 className="mt-1.5 line-clamp-2 text-[14px] leading-snug font-semibold tracking-normal text-foreground sm:text-[15px]">
           {/* ::after stretches the link across the card; controls sit above it (z-10). */}
-          <Link href={`/product/${product.slug}`} className="rounded-sm after:absolute after:inset-0 after:rounded-xl after:content-[''] group-hover:underline">
+          <Link
+            href={`/product/${product.slug}`}
+            className="rounded-sm transition-colors duration-150 after:absolute after:inset-0 after:rounded-2xl after:content-[''] group-hover:text-primary"
+          >
             {product.name}
           </Link>
         </h3>
-        <p className="mt-1 truncate text-[12px] text-muted-foreground">
-          {brandName(product.brand)} · Part # <span className="font-medium text-foreground">{product.mpn}</span>
-        </p>
 
-        <div className="mt-1.5">
-          <Rating value={product.rating} count={product.reviews} />
-        </div>
-
-        <p className="mt-1.5 text-[13px]">
-          {out ? (
-            <span className="font-semibold text-sale">Out of stock</span>
-          ) : (
-            <>
-              <span className="font-semibold text-primary">In stock</span>
-              {product.stock === "low" && <span className="font-medium text-amber-text"> · Only a few left</span>}
-            </>
-          )}
+        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+          <StockLabel product={product} />
+          <span className="inline-flex items-center gap-1 text-muted-foreground">
+            <Star aria-hidden="true" className="size-3.5 fill-star text-star" />
+            <span aria-hidden="true" className="font-semibold text-foreground tabular-nums">
+              {product.rating.toFixed(1)}
+            </span>
+            <span aria-hidden="true" className="tabular-nums">
+              ({product.reviews})
+            </span>
+            <span className="sr-only">
+              Rated {product.rating.toFixed(1)} out of 5 from {product.reviews} ratings
+            </span>
+          </span>
         </p>
 
         <div className="mt-auto pt-3">
-          <AddControl product={product} />
+          <PriceStack product={product} size="md" className="min-h-[3.4rem] border-t border-border pt-3" />
+          <div className="mt-3">
+            <AddControl product={product} />
+          </div>
         </div>
       </div>
     </article>

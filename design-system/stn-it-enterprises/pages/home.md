@@ -4,8 +4,9 @@
 
 ## Section order (canvas background, white cards)
 
-1. Hero carousel (3 slides: laptops, server parts, power) + side column: Today's deals card,
-   Request-a-quote card. Side column is hidden on phones.
+1. Hero product slideshow (`home/hero.tsx`): one product per slide, picked by part number in
+   `SLIDE_MPNS`, with a category headline, price, "View product" and "Shop <category>". Auto-advances
+   every 6s (not under reduced motion), then a trust strip. The page's h1 is visually hidden.
 2. Shop by category — 9 round shortcuts
 3. Four cards: Keep your servers running (2×2), Office essentials (2×2), Top deal, Need help choosing?
 4. Rail: Today's deals
@@ -14,7 +15,7 @@
 7. Rail: Top rated in Office & Peripherals
 8. Rail: Power supplies
 9. Rail: Laptops for work
-10. Brands we carry (text wordmarks until logo files arrive)
+10. Brands we carry: scrolling logo marquee (grey, darkens on hover; Generic is left out)
 11. Newsletter band
 
 ## Content notes

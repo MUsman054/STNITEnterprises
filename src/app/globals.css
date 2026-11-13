@@ -209,33 +209,29 @@
 }
 
 /*
- * Scroll reveal. `.reveal` only hides content once <RevealObserver> is running and has
- * added `reveal-ready` to <html>. Put it on a plain wrapper, never on an element that has
- * its own hover transform.
+ * Scroll reveal, in CSS only (scroll-driven animation). Nothing is changed in the HTML, so
+ * it cannot cause hydration mismatches. Browsers without `animation-timeline` and anyone
+ * with reduced motion just see the content. Put `.reveal` on a plain wrapper, never on an
+ * element that has its own hover transform or another animation.
  */
-@media (prefers-reduced-motion: no-preference) {
-  html.reveal-ready .reveal {
+@keyframes reveal-up {
+  from {
     opacity: 0;
     translate: 0 22px;
-    transition:
-      opacity 0.6s var(--ease-out-soft),
-      translate 0.6s var(--ease-out-soft);
   }
-
-  html.reveal-ready .reveal.is-visible {
+  to {
     opacity: 1;
     translate: 0 0;
   }
-
-  html.reveal-ready .reveal.no-reveal-motion {
-    transition: none;
-  }
 }
 
-@media print {
-  .reveal {
-    opacity: 1 !important;
-    translate: none !important;
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: reveal-up linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 30%;
+    }
   }
 }
 
@@ -366,6 +362,20 @@ dialog.modal[open]::backdrop {
   dialog.modal[open]::backdrop {
     background: rgb(10 11 13 / 0);
   }
+}
+
+/* Hero slideshow: the active progress bar fills; its animationend advances the slide. */
+@keyframes hero-progress {
+  from {
+    scale: 0 1;
+  }
+  to {
+    scale: 1 1;
+  }
+}
+
+.animate-hero-progress {
+  animation: hero-progress linear both;
 }
 
 /* Brand carousel: two copies of the list scroll left forever; pauses on hover/focus. */

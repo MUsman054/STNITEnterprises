@@ -16,9 +16,12 @@ The tokens below live in `src/app/globals.css` under `@theme` and are the source
 
 ## Direction
 
-A clean marketplace in the spirit of large retailers, not a copy of any one of them:
-charcoal header and footer, a dominant part-number search, category and brand navigation,
-white cards on a neutral grey canvas, dense product rows and clear prices. The two logo
+A B2B hardware store with its own look. It must not resemble Amazon or another big retailer:
+no superscript "$ cents" prices, no red "% off" badges, no "List price / You save" wording,
+no full-width "+ Add" pills, no three-column image/details/buy-box product page. Instead:
+charcoal header and footer, a dominant part-number search, part numbers shown in monospace,
+white cards on a neutral grey canvas, plain prices with green savings. No "pill with a dot"
+eyebrows or lime pill labels: eyebrows are plain uppercase text. The two logo
 greens (#6ED653 light, #43B02A dark) are the accents; #1F7A1F is used for buttons on light
 backgrounds because white text on the logo greens fails contrast.
 
@@ -52,7 +55,9 @@ Rules: never white text on `brand`; on light hero use `foreground`/`primary-hove
 
 - **UI and headings:** Inter (`font-sans`, `font-heading`)
 - **Display:** Poppins 600–800 (`font-display`) for the wordmark and hero titles only
-- Prices: `<Price>` — small "$" and cents, large dollars, `tabular-nums`; screen readers get the plain price.
+- Prices: `<Price>` is the plain full price ("$2,899.00", bold, `tabular-nums`). `<PriceStack>` adds
+  "was $X" (muted, struck through) and, at large sizes, a green "Save $X (N%)" chip. Prices are never red.
+- Part numbers (MPN, SKU) use `font-mono`.
 
 ## Layout
 
@@ -62,27 +67,31 @@ Rules: never white text on `brand`; on light hero use `foreground`/`primary-hove
   hover/focus flyouts, Business & bulk orders, Customer service. Phones: full-width search
   under the bar and scrollable department chips.
 - Listing pages: 240px filter sidebar (drawer on phones) + 2/3/4-column grid.
-- Product page: image (hover zoom) · details · buy box (sticky).
+- Product page: two columns. Image (sticky, hover zoom) | brand/condition/category chips, title,
+  MPN/SKU chips, rating, summary, purchase card (price, stock, qty + Add to cart, Buy now,
+  Get a quote / Save), key-spec tiles, service strip. Tabs below.
 
 ## Components
 
 | Component | File | Notes |
 |-----------|------|-------|
 | Search with suggestions | `search-box.tsx` | ARIA combobox; popular searches on focus, live product/category suggestions, arrow keys + Enter |
-| All menu | `all-menu.tsx` | Left drawer; department sub-panel slides in; focus moves to Back |
-| Product card | `product-card.tsx` | Price first, 2-line title, stars, free shipping, "+ Add" → inline stepper |
+| All menu | `all-menu.tsx` | Phones/tablets. Main panel: 3 shortcuts (Deals, Wishlist, Account), 5 rows, call button. Categories (picture grid), Brands, Support open one sub-panel; focus moves to Back |
+| Product card | `product-card.tsx` | Bordered card; Refurb/New chip, dark "−N%" chip with lime text; brand + mono part # line; 2-line title; stock text + single-star rating; price stack; plain outlined "Add to cart" (becomes a stepper) |
+| Brand logos | `brand-mark.tsx` | `BrandMark` (mask, takes currentColor) and `BrandLogo` (wordmark alone, symbol + name, or monogram). SVGs in `public/brands` |
 | Product rail | `product-rail.tsx` | Scroll-snap row with arrow buttons |
 | Filters | `product-listing.tsx` | Category, brand, price band, condition, rating, on sale; counts; chips; clear all |
 | Cart toast | `cart-toast.tsx` | After card adds; 5s, pauses on hover/focus; no focus steal |
 | Cart drawer | `cart-drawer.tsx` | After product-page adds and the header cart button |
 | Cart page | `cart-view.tsx` | Quantity, Delete, Save for later, Saved list, Move to cart, suggestions |
-| Buy box | `buy-box.tsx` | Add to cart (drawer), Buy now (straight to checkout) |
+| Buy box | `buy-box.tsx` | Purchase card on the product page: Add to cart (drawer), Buy now (checkout), Get a quote, Save |
 
 ## Motion
 
 150–700ms, `--ease-out-soft`, all disabled under `prefers-reduced-motion`. Card image zoom
-(1.06), hero slide/translate with staggered text, drawer slides, flyout fade, toast drop-in,
-cart badge pop, scroll reveal on home sections.
+(1.06), hero product slideshow (crossfade, 6s progress bars that pause on hover/focus/hidden tab, pause button, swipe), drawer slides, flyout fade, toast drop-in,
+cart badge pop, scroll reveal on home sections (CSS `animation-timeline: view()`, no JS, so no
+hydration mismatches).
 
 ## Pre-Delivery Checklist
 

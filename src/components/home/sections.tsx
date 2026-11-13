@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight, FileText, Headset, Lock, PackageCheck, Quote, Star, Truck } from "lucide-react";
+import { BrandLogo } from "@/components/brand-mark";
 import { ProductRail } from "@/components/product-rail";
 import { brands, categories, dealProducts, maxDiscount, productsInCategory } from "@/lib/catalog";
 import { site } from "@/lib/site";
@@ -59,21 +60,22 @@ export function FeaturedCategories() {
 }
 
 export function BrandCarousel() {
-  const loop = [...brands, ...brands];
+  // Generic is a catch-all, not a brand worth advertising.
+  const shown = brands.filter((brand) => brand.slug !== "generic");
+  const loop = [...shown, ...shown];
   return (
     <section aria-labelledby="brands-title" className={`reveal ${cardClass} overflow-hidden`}>
       <SectionHead id="brands-title" title="Brands we carry" action={{ href: "/brands", label: "All brands" }} />
-      {/* Text wordmarks until official logo files are supplied. */}
-      <div className="marquee relative -mx-5 overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_6%,black_94%,transparent)]">
+      <div className="marquee relative -mx-4 overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_6%,black_94%,transparent)] sm:-mx-5">
         <ul className="marquee-track flex w-max gap-3 px-5">
           {loop.map((brand, index) => (
-            <li key={`${brand.slug}-${index}`} aria-hidden={index >= brands.length ? true : undefined}>
+            <li key={`${brand.slug}-${index}`} aria-hidden={index >= shown.length ? true : undefined}>
               <Link
                 href={`/brand/${brand.slug}`}
-                tabIndex={index >= brands.length ? -1 : undefined}
-                className="grid h-20 w-44 place-items-center rounded-xl border border-border px-4 text-center text-[18px] font-bold tracking-tight text-muted-foreground transition-[color,border-color,background-color] duration-200 hover:border-brand hover:bg-primary-soft hover:text-foreground"
+                tabIndex={index >= shown.length ? -1 : undefined}
+                className="group flex h-20 min-w-44 items-center justify-center gap-3 rounded-xl border border-border px-6 text-muted-foreground transition-[color,border-color,background-color] duration-200 hover:border-brand hover:bg-primary-soft hover:text-foreground"
               >
-                {brand.name}
+                <BrandLogo brand={brand} />
               </Link>
             </li>
           ))}
@@ -88,7 +90,7 @@ export function DealsOfTheWeek() {
     <section aria-labelledby="deals-week" className="reveal grid grid-cols-1 gap-3 lg:grid-cols-[300px_minmax(0,1fr)]">
       <div className="on-dark relative flex flex-col justify-between overflow-hidden rounded-2xl bg-hero-dark p-6 text-white">
         <div className="relative">
-          <p className="inline-flex rounded-full bg-lime px-3 py-1 text-[13px] font-bold text-ink">Up to {maxDiscount}% off</p>
+          <p className="text-[15px] font-semibold text-lime">Up to {maxDiscount}% off</p>
           <h2 id="deals-week" className="mt-4 text-[28px] leading-tight font-bold">
             Deals of the week
           </h2>

@@ -3,7 +3,6 @@ import { Inter, Poppins } from "next/font/google";
 import { CartDrawer } from "@/components/cart-drawer";
 import { CartToast } from "@/components/cart-toast";
 import { LiveChat } from "@/components/live-chat";
-import { RevealObserver } from "@/components/reveal-observer";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { site } from "@/lib/site";
@@ -58,7 +57,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SiteFooter />
         <CartDrawer />
         <CartToast />
-        <RevealObserver />
         <LiveChat />
       </body>
     </html>

@@ -38,7 +38,6 @@ export function FeaturedProducts() {
         products={list}
         href={`/shop`}
         linkLabel="View all"
-        className="animate-fade-in"
       />
     </div>
   );

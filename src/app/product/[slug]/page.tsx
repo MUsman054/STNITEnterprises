@@ -1,25 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Check } from "lucide-react";
+import { Lock, RotateCcw, Star, Truck } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import { BuyBox } from "@/components/buy-box";
 import { Breadcrumbs } from "@/components/page-banner";
-import { Price } from "@/components/price";
 import { ProductRail } from "@/components/product-rail";
 import { Tabs } from "@/components/product-tabs";
-import { Rating } from "@/components/rating";
 import { ZoomImage } from "@/components/zoom-image";
 import {
   brandName,
   childName,
-  discountPercent,
+  getBrand,
   getCategory,
   getProduct,
   products,
   productsByBrand,
   productsInCategory,
 } from "@/lib/catalog";
-import { formatPrice, site } from "@/lib/site";
+import { site } from "@/lib/site";
 
 export function generateStaticParams() {
   return products.map((product) => ({ slug: product.slug }));
@@ -44,8 +43,8 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
   if (!product) notFound();
 
   const category = getCategory(product.category);
-  const discount = discountPercent(product);
   const brand = brandName(product.brand);
+  const brandInfo = getBrand(product.brand);
   const related = productsInCategory(product.category).filter((p) => p.slug !== product.slug).sort((a, b) => Number(b.child === product.child) - Number(a.child === product.child));
   const sameBrand = productsByBrand(product.brand).filter((p) => p.slug !== product.slug && p.category !== product.category);
 
@@ -96,69 +95,97 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
         ]}
       />
 
-      <div className="mt-2 grid gap-6 md:grid-cols-2 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_minmax(0,3fr)] lg:gap-8">
-        <div className="animate-fade-up md:row-span-2 lg:row-span-1">
+      <div className="mt-2 grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10 xl:gap-14">
+        <div className="animate-fade-up">
           <div className="md:sticky md:top-24">
             <ZoomImage image={product.image} alt={product.name} />
           </div>
         </div>
 
         <div className="animate-fade-up min-w-0">
-          <Link href={`/brand/${product.brand}`} className="text-[14px] font-semibold text-primary underline-offset-4 hover:underline">
-            {brand}
-          </Link>
-          <h1 className="mt-1 text-[22px] leading-snug font-semibold tracking-tight text-foreground sm:text-[26px]">{product.name}</h1>
-          <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[14px]">
-            <div className="flex gap-1.5">
-              <dt className="text-muted-foreground">Part #</dt>
-              <dd className="font-semibold text-foreground">{product.mpn}</dd>
-            </div>
-            <div className="flex gap-1.5">
-              <dt className="text-muted-foreground">SKU</dt>
-              <dd className="font-semibold text-foreground">{product.sku}</dd>
-            </div>
-          </dl>
-          <div className="mt-2">
-            <Rating value={product.rating} count={product.reviews} size="md" showValue />
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/brand/${product.brand}`}
+              className="group inline-flex min-h-9 items-center gap-2 rounded-full border border-border py-1 pr-3.5 pl-2.5 text-[14px] font-semibold text-foreground transition-colors duration-150 hover:border-primary hover:text-primary"
+            >
+              {brandInfo?.logo && !brandInfo.wordmark && <BrandMark brand={brandInfo} className="size-4 text-current" />}
+              {brand}
+            </Link>
+            <span className="inline-flex min-h-9 items-center rounded-full bg-nav px-3 text-[13px] font-semibold text-lime">{product.condition}</span>
+            {category && (
+              <Link
+                href={`/category/${category.slug}/${product.child}`}
+                className="inline-flex min-h-9 items-center rounded-full bg-primary-soft px-3 text-[13px] font-semibold text-primary transition-colors duration-150 hover:bg-primary hover:text-white"
+              >
+                {childName(product)}
+              </Link>
+            )}
           </div>
 
-          <div className="mt-4 border-t border-border pt-4">
-            {discount !== null && <p className="mb-1 inline-flex rounded-md bg-sale px-2 py-0.5 text-[13px] font-bold text-white">{discount}% off</p>}
-            <p className="flex flex-wrap items-baseline gap-x-3">
-              <Price amount={product.price} size="xl" label={discount !== null ? "Sale price" : undefined} className={discount !== null ? "text-sale" : "text-foreground"} />
-              {product.compareAt && discount !== null && (
-                <span className="text-[14px] text-muted-foreground">
-                  List price: <s>{formatPrice(product.compareAt)}</s>
-                  <span className="ml-2 font-semibold text-sale">You save {formatPrice(product.compareAt - product.price)}</span>
-                </span>
-              )}
+          <h1 className="mt-4 text-[24px] leading-tight font-bold tracking-tight text-foreground sm:text-[30px]">{product.name}</h1>
+
+          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px]">
+            <dl className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 rounded-lg bg-surface px-2.5 py-1">
+                <dt className="text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">MPN</dt>
+                <dd className="font-mono font-semibold text-foreground">{product.mpn}</dd>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-lg bg-surface px-2.5 py-1">
+                <dt className="text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">SKU</dt>
+                <dd className="font-mono font-semibold text-foreground">{product.sku}</dd>
+              </div>
+            </dl>
+            <p className="inline-flex items-center gap-1.5 text-muted-foreground">
+              <Star aria-hidden="true" className="size-4 fill-star text-star" />
+              <span className="font-semibold text-foreground">{product.rating.toFixed(1)}</span>
+              <span className="sr-only">out of 5,</span>
+              <span>· {product.reviews} reviews</span>
             </p>
-            <p className="mt-1 text-[14px] text-muted-foreground">
-              {product.condition} · Availability:{" "}
-              <span className={`font-semibold ${product.stock === "out" ? "text-sale" : "text-primary"}`}>{product.stock === "out" ? "Out of stock" : "In stock"}</span>
-            </p>
           </div>
 
-          <div className="mt-5 border-t border-border pt-4">
-            <h2 className="text-lg font-bold text-foreground">Overview</h2>
-            <p className="mt-2 text-[15px] text-foreground">{product.summary}</p>
-            <ul className="mt-3 space-y-1.5 text-[15px] text-foreground">
-              {product.specs.slice(0, 4).map(([label, value]) => (
-                <li key={label} className="flex gap-2.5">
-                  <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-primary" />
-                  <span>
-                    <span className="text-muted-foreground">{label}:</span> {value}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+          <p className="mt-4 text-[16px] text-muted-foreground">{product.summary}</p>
 
-        <div className="animate-fade-up md:col-start-2 lg:col-start-auto">
-          <div className="lg:sticky lg:top-24">
+          <div className="mt-5">
             <BuyBox product={product} />
           </div>
+
+          <section aria-labelledby="key-specs" className="mt-6">
+            <h2 id="key-specs" className="text-[13px] font-bold tracking-[0.12em] text-muted-foreground uppercase">
+              Key specs
+            </h2>
+            <dl className="mt-3 grid grid-cols-2 gap-2">
+              {product.specs.slice(0, 4).map(([label, value]) => (
+                <div key={label} className="rounded-xl border border-border px-3.5 py-3">
+                  <dt className="text-[12px] text-muted-foreground">{label}</dt>
+                  <dd className="mt-0.5 text-[15px] font-semibold text-foreground">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          <ul className="mt-6 grid gap-3 border-t border-border pt-5 text-[14px] sm:grid-cols-3">
+            {[
+              { icon: Truck, title: "Free US shipping", body: "Ships in 2–5 business days", href: "/support/shipping-policy" },
+              { icon: RotateCcw, title: "RMA returns", body: "See the return policy", href: "/support/return-policy" },
+              { icon: Lock, title: "Secure checkout", body: "Encrypted payments", href: undefined },
+            ].map(({ icon: Icon, title, body, href }) => (
+              <li key={title} className="flex items-start gap-3">
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-nav text-lime">
+                  <Icon aria-hidden="true" className="size-[18px]" />
+                </span>
+                <span>
+                  <span className="block font-semibold text-foreground">{title}</span>
+                  {href ? (
+                    <Link href={href} className="text-muted-foreground underline-offset-4 hover:text-primary hover:underline">
+                      {body}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">{body}</span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
