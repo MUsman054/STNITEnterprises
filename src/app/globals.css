@@ -1,0 +1,394 @@
+@import "tailwindcss";
+
+/* Design tokens. Source of truth: design-system/stn-it-enterprises/MASTER.md */
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-poppins), var(--font-inter), ui-sans-serif, sans-serif;
+}
+
+@theme {
+  /* Surfaces */
+  --color-background: #ffffff;
+  --color-canvas: #f3f4f6; /* neutral page background behind white cards */
+  --color-surface: #f6f7f8; /* image wells, table stripes */
+  --color-foreground: #111418;
+  --color-muted-foreground: #5a6169;
+  --color-border: #e1e4e8;
+
+  /* Charcoal header and footer */
+  --color-nav: #121417;
+  --color-nav-2: #1d2126;
+  --color-nav-deep: #0a0b0d;
+  --color-nav-muted: #b9c0c7;
+
+  /* Greens from the logo */
+  --color-brand: #43b02a; /* logo dark green: search button, accents. Never behind white text */
+  --color-lime: #6ed653; /* logo light green: highlights and badges on charcoal */
+  --color-primary: #1f7a1f; /* buttons and links on light backgrounds (white text 5.4:1) */
+  --color-primary-hover: #17621a;
+  --color-primary-soft: #eaf6e4;
+  --color-hero-dark: #15181c;
+  --color-hero-light: #e8f5e2;
+
+  /* Status */
+  --color-sale: #b91c1c;
+  --color-star: #d97706;
+  --color-amber-text: #b45309;
+  --color-ink: #111418;
+
+  --shadow-card: 0 1px 2px rgb(15 26 20 / 0.06), 0 1px 3px rgb(15 26 20 / 0.04);
+  --shadow-lift: 0 16px 32px -14px rgb(15 26 20 / 0.24), 0 2px 6px rgb(15 26 20 / 0.06);
+  --shadow-pop: 0 24px 48px -16px rgb(15 26 20 / 0.32), 0 4px 10px rgb(15 26 20 / 0.08);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@utility container-page {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1400px;
+  padding-inline: 0.75rem;
+
+  @media (width >= 40rem) {
+    padding-inline: 1.25rem;
+  }
+
+  @media (width >= 80rem) {
+    padding-inline: 1.5rem;
+  }
+}
+
+/* Horizontal scrollers without a visible scrollbar (they have arrow buttons or swipe). */
+@utility scrollbar-none {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    scroll-behavior: smooth;
+    scroll-padding-top: 8rem;
+  }
+
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label[for],
+  select {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* On the dark green bars the green ring disappears; use the bright brand green. */
+  .on-dark :focus-visible {
+    outline-color: var(--color-lime);
+  }
+
+  ::selection {
+    background: var(--color-lime);
+    color: var(--color-ink);
+  }
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    translate: 0 -12px;
+    scale: 0.97;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+@keyframes toast-in-mobile {
+  from {
+    opacity: 0;
+    translate: 0 24px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.45s var(--ease-out-soft) both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out both;
+}
+
+.animate-pop-in {
+  animation: pop-in 0.35s var(--ease-out-soft) both;
+}
+
+.animate-toast {
+  animation: toast-in-mobile 0.35s var(--ease-out-soft) both;
+
+  @media (width >= 40rem) {
+    animation-name: toast-in;
+  }
+}
+
+/* Underline that grows from the left on hover / current page. */
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0% 1.5px;
+  transition: background-size 0.3s var(--ease-out-soft);
+}
+
+.link-underline:hover,
+.group:hover .link-underline,
+.link-underline[aria-current="page"],
+.link-underline[data-active="true"] {
+  background-size: 100% 1.5px;
+}
+
+/*
+ * Scroll reveal. `.reveal` only hides content once <RevealObserver> is running and has
+ * added `reveal-ready` to <html>. Put it on a plain wrapper, never on an element that has
+ * its own hover transform.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  html.reveal-ready .reveal {
+    opacity: 0;
+    translate: 0 22px;
+    transition:
+      opacity 0.6s var(--ease-out-soft),
+      translate 0.6s var(--ease-out-soft);
+  }
+
+  html.reveal-ready .reveal.is-visible {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  html.reveal-ready .reveal.no-reveal-motion {
+    transition: none;
+  }
+}
+
+@media print {
+  .reveal {
+    opacity: 1 !important;
+    translate: none !important;
+  }
+}
+
+/* ---------- Drawers (native <dialog>) ---------- */
+
+dialog.drawer {
+  position: fixed;
+  inset-block: 0;
+  margin: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  width: min(400px, 92vw);
+  max-width: 100vw;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  box-shadow: var(--shadow-pop);
+  transition:
+    translate 0.35s var(--ease-out-soft),
+    overlay 0.35s allow-discrete,
+    display 0.35s allow-discrete;
+}
+
+dialog.drawer[data-side="right"] {
+  inset-inline: auto 0;
+  translate: 100% 0;
+}
+
+dialog.drawer[data-side="left"] {
+  inset-inline: 0 auto;
+  translate: -100% 0;
+}
+
+dialog.drawer[open] {
+  translate: 0 0;
+}
+
+@starting-style {
+  dialog.drawer[data-side="right"][open] {
+    translate: 100% 0;
+  }
+
+  dialog.drawer[data-side="left"][open] {
+    translate: -100% 0;
+  }
+}
+
+dialog.drawer::backdrop {
+  background: rgb(10 11 13 / 0);
+  transition:
+    background 0.35s ease,
+    overlay 0.35s allow-discrete,
+    display 0.35s allow-discrete;
+}
+
+dialog.drawer[open]::backdrop {
+  background: rgb(10 11 13 / 0.6);
+}
+
+@starting-style {
+  dialog.drawer[open]::backdrop {
+    background: rgb(10 11 13 / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Centered modal (native <dialog>) ---------- */
+
+dialog.modal {
+  margin: auto;
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  border: 0;
+  border-radius: 1.25rem;
+  padding: 0;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  box-shadow: var(--shadow-pop);
+  opacity: 0;
+  scale: 0.96;
+  transition:
+    opacity 0.25s ease,
+    scale 0.3s var(--ease-out-soft),
+    overlay 0.3s allow-discrete,
+    display 0.3s allow-discrete;
+}
+
+dialog.modal[open] {
+  opacity: 1;
+  scale: 1;
+}
+
+@starting-style {
+  dialog.modal[open] {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+dialog.modal::backdrop {
+  background: rgb(10 11 13 / 0);
+  transition:
+    background 0.3s ease,
+    overlay 0.3s allow-discrete,
+    display 0.3s allow-discrete;
+}
+
+dialog.modal[open]::backdrop {
+  background: rgb(10 11 13 / 0.6);
+}
+
+@starting-style {
+  dialog.modal[open]::backdrop {
+    background: rgb(10 11 13 / 0);
+  }
+}
+
+/* Brand carousel: two copies of the list scroll left forever; pauses on hover/focus. */
+@keyframes marquee {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: -50% 0;
+  }
+}
+
+.marquee-track {
+  animation: marquee 32s linear infinite;
+}
+
+.marquee:hover .marquee-track,
+.marquee:focus-within .marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
