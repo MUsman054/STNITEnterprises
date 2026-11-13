@@ -5,8 +5,10 @@
 ## Section order (canvas background, white cards)
 
 1. Hero product slideshow (`home/hero.tsx`): one product per slide, picked by part number in
-   `SLIDE_MPNS`, with a category headline, price, "View product" and "Shop <category>". Auto-advances
-   every 6s (not under reduced motion), then a trust strip. The page's h1 is visually hidden.
+   `SLIDE_MPNS`, in a compact white card on the canvas: text left, large unframed photo right.
+   Auto-advances every 6s and keeps running under the mouse; pauses only with the pause button,
+   keyboard focus inside it, or a hidden tab (never auto-plays under reduced motion). Trust strip
+   below. The page's h1 is visually hidden.
 2. Shop by category — 9 round shortcuts
 3. Four cards: Keep your servers running (2×2), Office essentials (2×2), Top deal, Need help choosing?
 4. Rail: Today's deals

@@ -7,8 +7,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play, ShieldCheck, Truck,
 import { discountPercent, getCategory, products, type Product } from "@/lib/catalog";
 import { formatPrice } from "@/lib/site";
 
-/** Products shown in the hero, in order. Change the part numbers to change the slides. */
-/** Use products that have a real manufacturer photo. */
+/** Products shown in the hero, in order. Use products that have a real manufacturer photo. */
 const SLIDE_MPNS = ["868703-B21", "DS920+", "ST4000NM000A", "JL253A", "M393A4K40DB2-CVF", "720479-B21"];
 
 /** One headline per category, so slides read as offers rather than long product titles. */
@@ -31,14 +30,15 @@ const slides = SLIDE_MPNS.map((mpn) => products.find((product) => product.mpn ==
 const INTERVAL = 6000;
 
 /**
- * Auto-advancing product showcase. Pauses on hover, keyboard focus, when the tab is hidden
- * and with the pause button; never auto-plays under prefers-reduced-motion. Swipe on touch.
+ * Auto-advancing product banner: a compact white card, text on the left and a large
+ * product photo on the right. Keeps running under the mouse; pauses only with the pause
+ * button, while a keyboard user is inside it, or when the tab is hidden. Never auto-plays
+ * under prefers-reduced-motion. Swipe on touch.
  */
 export function Hero() {
   const [index, setIndex] = useState(0);
   const [userPaused, setUserPaused] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const [focused, setFocused] = useState(false);
+  const [keyboardInside, setKeyboardInside] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [hidden, setHidden] = useState(false);
   const swipeStart = useRef<number | null>(null);
@@ -60,115 +60,112 @@ export function Hero() {
   }, []);
 
   // The active progress bar's CSS animation is the timer: when it ends we advance, and
-  // pausing it (hover, focus, hidden tab) pauses the slideshow at exactly the same point.
+  // pausing the animation pauses the slideshow at exactly the same point.
   const playing = !userPaused && !reducedMotion && count > 1;
-  const running = playing && !hovered && !focused && !hidden;
+  const running = playing && !keyboardInside && !hidden;
 
   if (count === 0) return null;
 
   return (
-    <section
-      aria-roledescription="carousel"
-      aria-label="Featured products"
-      className="on-dark relative overflow-hidden bg-hero-dark text-white"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onFocus={() => setFocused(true)}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
-      }}
-    >
+    <section aria-roledescription="carousel" aria-label="Featured products" className="bg-canvas pt-3 sm:pt-5">
       <h1 className="sr-only">STN IT Enterprise: servers, parts and storage, sourced right</h1>
 
-      <div className="container-page relative pt-6 pb-5 md:pt-10 lg:pt-12">
+      <div className="container-page">
         <div
-          aria-live={running ? "off" : "polite"}
-          className="grid touch-pan-y"
-          onPointerDown={(event) => {
-            if (event.pointerType !== "mouse") swipeStart.current = event.clientX;
+          className="relative overflow-hidden rounded-3xl bg-background shadow-card"
+          // Only keyboard focus pauses (a mouse click on an arrow should not).
+          onFocus={(event) => {
+            if (event.target.matches(":focus-visible")) setKeyboardInside(true);
           }}
-          onPointerUp={(event) => {
-            if (swipeStart.current === null) return;
-            const delta = event.clientX - swipeStart.current;
-            swipeStart.current = null;
-            if (Math.abs(delta) > 50) go(index + (delta < 0 ? 1 : -1));
-          }}
-          onPointerCancel={() => {
-            swipeStart.current = null;
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setKeyboardInside(false);
           }}
         >
-          {slides.map((product, i) => (
-            <Slide key={product.slug} product={product} position={i} total={count} active={i === index} />
-          ))}
-        </div>
+          <div
+            aria-live={running ? "off" : "polite"}
+            className="grid touch-pan-y"
+            onPointerDown={(event) => {
+              if (event.pointerType !== "mouse") swipeStart.current = event.clientX;
+            }}
+            onPointerUp={(event) => {
+              if (swipeStart.current === null) return;
+              const delta = event.clientX - swipeStart.current;
+              swipeStart.current = null;
+              if (Math.abs(delta) > 50) go(index + (delta < 0 ? 1 : -1));
+            }}
+            onPointerCancel={() => {
+              swipeStart.current = null;
+            }}
+          >
+            {slides.map((product, i) => (
+              <Slide key={product.slug} product={product} position={i} total={count} active={i === index} />
+            ))}
+          </div>
 
-        {/* Controls */}
-        <div className="mt-6 flex items-center gap-3 lg:mt-8">
-          <div className="flex flex-1 items-center gap-1.5 sm:gap-2" role="group" aria-label="Choose slide">
-            {slides.map((product, i) => {
-              const active = i === index;
-              return (
-                <button
-                  key={product.slug}
-                  type="button"
-                  onClick={() => go(i)}
-                  aria-label={`Slide ${i + 1}: ${product.name}`}
-                  aria-current={active ? "true" : undefined}
-                  className="group flex h-11 flex-1 items-center sm:max-w-24"
-                >
-                  <span className={`relative block h-1 w-full overflow-hidden rounded-full transition-colors duration-200 ${active ? "bg-white/35" : "bg-white/15 group-hover:bg-white/30"}`}>
+          {/* Controls: bottom of the text column */}
+          <div className="flex items-center gap-3 px-5 pb-5 sm:px-8 md:absolute md:bottom-0 md:left-0 md:w-1/2 md:px-10 md:pb-7 lg:px-12">
+            <div className="flex items-center gap-1.5" role="group" aria-label="Choose slide">
+              {slides.map((product, i) => {
+                const active = i === index;
+                return (
+                  <button
+                    key={product.slug}
+                    type="button"
+                    onClick={() => go(i)}
+                    aria-label={`Slide ${i + 1}: ${product.name}`}
+                    aria-current={active ? "true" : undefined}
+                    className="group flex h-11 items-center"
+                  >
                     <span
-                      key={active ? `on-${index}` : "off"}
-                      className={`absolute inset-0 origin-left rounded-full bg-lime ${
-                        active ? (playing ? "animate-hero-progress" : "") : "scale-x-0"
+                      className={`relative block h-1.5 overflow-hidden rounded-full transition-[width,background-color] duration-300 ${
+                        active ? "w-10 bg-foreground/15" : "w-4 bg-foreground/15 group-hover:bg-foreground/30"
                       }`}
-                      style={active ? { animationDuration: `${INTERVAL}ms`, animationPlayState: running ? "running" : "paused" } : undefined}
-                      onAnimationEnd={active && playing ? () => go(index + 1) : undefined}
-                    />
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <span className="hidden text-[13px] font-medium text-nav-muted tabular-nums sm:inline" aria-hidden="true">
-            {String(index + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
-          </span>
-
-          <div className="flex items-center gap-1">
-            <button type="button" onClick={() => go(index - 1)} aria-label="Previous slide" className={controlButton}>
-              <ChevronLeft aria-hidden="true" className="size-5" />
-            </button>
-            {!reducedMotion && (
-              <button
-                type="button"
-                onClick={() => setUserPaused((value) => !value)}
-                aria-label={userPaused ? "Play slideshow" : "Pause slideshow"}
-                className={controlButton}
-              >
-                {userPaused ? <Play aria-hidden="true" className="size-4" /> : <Pause aria-hidden="true" className="size-4" />}
+                    >
+                      {active && (
+                        <span
+                          key={`bar-${index}`}
+                          className={`absolute inset-0 origin-left rounded-full bg-primary ${playing ? "animate-hero-progress" : ""}`}
+                          style={{ animationDuration: `${INTERVAL}ms`, animationPlayState: running ? "running" : "paused" }}
+                          onAnimationEnd={playing ? () => go(index + 1) : undefined}
+                        />
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="ml-auto flex items-center gap-1">
+              <button type="button" onClick={() => go(index - 1)} aria-label="Previous slide" className={controlButton}>
+                <ChevronLeft aria-hidden="true" className="size-5" />
               </button>
-            )}
-            <button type="button" onClick={() => go(index + 1)} aria-label="Next slide" className={controlButton}>
-              <ChevronRight aria-hidden="true" className="size-5" />
-            </button>
+              {!reducedMotion && (
+                <button
+                  type="button"
+                  onClick={() => setUserPaused((value) => !value)}
+                  aria-label={userPaused ? "Play slideshow" : "Pause slideshow"}
+                  className={controlButton}
+                >
+                  {userPaused ? <Play aria-hidden="true" className="size-4" /> : <Pause aria-hidden="true" className="size-4" />}
+                </button>
+              )}
+              <button type="button" onClick={() => go(index + 1)} aria-label="Next slide" className={controlButton}>
+                <ChevronRight aria-hidden="true" className="size-5" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Trust strip */}
-      <div className="relative border-t border-white/10 bg-black/20">
-        <ul className="container-page flex flex-wrap gap-x-8 gap-y-2 py-3.5 text-[14px] text-[#c9cfd5]">
+        <ul className="flex flex-wrap gap-x-8 gap-y-2 px-1 pt-4 text-[14px] text-muted-foreground">
           <li className="flex items-center gap-2">
-            <Truck aria-hidden="true" className="size-4 text-lime" />
+            <Truck aria-hidden="true" className="size-4 text-primary" />
             Ships in 2–5 business days
           </li>
           <li className="flex items-center gap-2">
-            <ShieldCheck aria-hidden="true" className="size-4 text-lime" />
+            <ShieldCheck aria-hidden="true" className="size-4 text-primary" />
             Certified sourcing
           </li>
           <li className="flex items-center gap-2">
-            <Wrench aria-hidden="true" className="size-4 text-lime" />
+            <Wrench aria-hidden="true" className="size-4 text-primary" />
             Expert procurement team
           </li>
         </ul>
@@ -178,7 +175,7 @@ export function Hero() {
 }
 
 const controlButton =
-  "grid size-11 place-items-center rounded-full border border-white/15 text-white transition-colors duration-200 hover:border-lime hover:text-lime";
+  "grid size-11 place-items-center rounded-full border border-border bg-background text-foreground transition-colors duration-200 hover:border-foreground/40";
 
 function Slide({ product, position, total, active }: { product: Product; position: number; total: number; active: boolean }) {
   const category = getCategory(product.category);
@@ -192,40 +189,37 @@ function Slide({ product, position, total, active }: { product: Product; positio
       aria-label={`${position + 1} of ${total}`}
       aria-hidden={!active}
       inert={!active}
-      className={`[grid-area:1/1] grid items-center gap-6 transition-[opacity,visibility] duration-700 ease-[var(--ease-out-soft)] md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12 ${
+      className={`[grid-area:1/1] grid transition-[opacity,visibility] duration-500 ease-out md:min-h-[440px] md:grid-cols-2 ${
         active ? "visible opacity-100" : "invisible opacity-0"
       }`}
     >
-      {/* Text */}
-      <div
-        className={`order-2 transition-[translate] duration-700 ease-[var(--ease-out-soft)] md:order-1 ${active ? "translate-x-0" : "-translate-x-6"}`}
-      >
-        <p className="text-[13px] font-semibold tracking-[0.14em] text-nav-muted uppercase">
+      {/* Text (leaves room at the bottom for the controls on desktop) */}
+      <div className="order-2 flex flex-col justify-center px-5 pt-2 pb-4 sm:px-8 md:order-1 md:px-10 md:pt-10 md:pb-24 lg:px-12">
+        <p className="text-[13px] font-semibold tracking-[0.14em] text-primary uppercase">
           {category?.short ?? "Featured"} / {product.condition}
         </p>
-        <p className="mt-4 font-display text-[30px] leading-[1.08] font-bold text-balance sm:text-[42px] lg:text-[52px]">{headline}</p>
-        <p className="mt-3 max-w-xl text-[16px] text-[#c9cfd5] sm:text-lg">
-          <span className="font-semibold text-white">{product.name}</span>
-          <span className="hidden sm:inline"> — {product.summary}</span>
+        <p className="mt-3 font-display text-[28px] leading-[1.1] font-bold text-balance text-foreground sm:text-[36px] lg:text-[44px]">
+          {headline}
+        </p>
+        <p className="mt-3 max-w-lg text-[15px] text-muted-foreground sm:text-[16px]">
+          <span className="font-semibold text-foreground">{product.name}</span>
+          <span className="hidden lg:inline">. {product.summary}</span>
         </p>
 
-        <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4">
-          <div>
-            <p className="text-[12px] font-semibold tracking-[0.12em] text-nav-muted uppercase">{discount !== null ? "Now" : "Price"}</p>
-            <p className="flex items-baseline gap-2.5">
-              <span className="text-[30px] leading-none font-bold tabular-nums">{formatPrice(product.price)}</span>
-              {discount !== null && product.compareAt && (
-                <span className="text-[15px] text-nav-muted tabular-nums">
-                  <span className="sr-only">was </span>
-                  <s>{formatPrice(product.compareAt)}</s>
-                </span>
-              )}
-            </p>
-          </div>
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <p className="flex items-baseline gap-2">
+            <span className="text-[26px] leading-none font-bold text-foreground tabular-nums">{formatPrice(product.price)}</span>
+            {discount !== null && product.compareAt && (
+              <span className="text-[14px] text-muted-foreground tabular-nums">
+                <span className="sr-only">was </span>
+                <s>{formatPrice(product.compareAt)}</s>
+              </span>
+            )}
+          </p>
           <div className="flex flex-wrap gap-2.5">
             <Link
               href={`/product/${product.slug}`}
-              className="group inline-flex min-h-12 items-center gap-2 rounded-full bg-lime px-6 text-[15px] font-bold text-ink transition-colors duration-200 hover:bg-white"
+              className="group inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-[15px] font-semibold text-white transition-colors duration-200 hover:bg-primary-hover"
             >
               View product
               <span className="sr-only">: {product.name}</span>
@@ -234,7 +228,7 @@ function Slide({ product, position, total, active }: { product: Product; positio
             {category && (
               <Link
                 href={`/category/${category.slug}`}
-                className="inline-flex min-h-12 items-center rounded-full border border-white/25 px-6 text-[15px] font-semibold text-white transition-colors duration-200 hover:bg-white/10"
+                className="inline-flex min-h-11 items-center rounded-full border border-foreground/20 px-5 text-[15px] font-semibold text-foreground transition-colors duration-200 hover:border-foreground/50"
               >
                 Shop {category.short}
               </Link>
@@ -243,18 +237,19 @@ function Slide({ product, position, total, active }: { product: Product; positio
         </div>
       </div>
 
-      {/* Product photo */}
-      <div className="order-1 md:order-2">
-        <div className="relative mx-auto aspect-[16/10] w-full max-w-[560px] overflow-hidden rounded-3xl bg-white md:aspect-[5/4]">
-          <Image
-            src={product.image.src}
-            alt={product.name}
-            fill
-            priority={position === 0}
-            sizes="(min-width: 1024px) 560px, (min-width: 768px) 45vw, 92vw"
-            className={`object-contain p-6 transition-[scale,opacity] duration-700 ease-[var(--ease-out-soft)] sm:p-10 ${active ? "scale-100" : "scale-95"}`}
-          />
-        </div>
+      {/* Photo: the whole right half, no frame */}
+      <div className="relative order-1 h-56 overflow-hidden sm:h-72 md:order-2 md:h-auto">
+        <Image
+          src={product.image.src}
+          alt={product.name}
+          fill
+          priority={position === 0}
+          sizes="(min-width: 768px) 50vw, 100vw"
+          // Manufacturer photos carry wide white margins, so they are scaled up on desktop.
+          className={`object-contain p-4 transition-[translate,scale] duration-700 ease-[var(--ease-out-soft)] md:p-6 ${
+            active ? "translate-x-0 scale-100 md:scale-[1.3]" : "translate-x-6 scale-95 md:scale-[1.2]"
+          }`}
+        />
       </div>
     </div>
   );

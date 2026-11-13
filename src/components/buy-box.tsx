@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Heart, ShoppingCart, Zap } from "lucide-react";
+import { Heart, ShoppingCart } from "lucide-react";
 import { addToCart, useCart } from "@/lib/cart-store";
 import type { Product } from "@/lib/catalog";
 import { site } from "@/lib/site";
 import { toggleWishlist, useWishlist } from "@/lib/wishlist-store";
-import { btnDark, btnPrimary } from "@/lib/ui";
+import { btnOutline, btnPrimary } from "@/lib/ui";
 import { PriceStack } from "@/components/price";
 import { StockLabel } from "@/components/product-card";
 import { QuantityStepper } from "@/components/quantity-stepper";
@@ -57,9 +57,8 @@ export function BuyBox({ product }: { product: Product }) {
               addToCart(product.slug, qty, "none");
               router.push("/checkout");
             }}
-            className={`${btnDark} min-h-12 w-full rounded-xl`}
+            className={`${btnOutline} min-h-12 w-full rounded-xl border-primary text-primary hover:border-primary-hover hover:bg-primary-soft`}
           >
-            <Zap aria-hidden="true" className="size-[18px] text-lime" />
             Buy now
           </button>
         </div>

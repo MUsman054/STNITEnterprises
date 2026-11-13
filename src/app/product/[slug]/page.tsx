@@ -111,7 +111,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
               {brandInfo?.logo && !brandInfo.wordmark && <BrandMark brand={brandInfo} className="size-4 text-current" />}
               {brand}
             </Link>
-            <span className="inline-flex min-h-9 items-center rounded-full bg-nav px-3 text-[13px] font-semibold text-lime">{product.condition}</span>
+            <span className="inline-flex min-h-9 items-center rounded-full border border-border px-3 text-[13px] font-semibold text-foreground">{product.condition}</span>
             {category && (
               <Link
                 href={`/category/${category.slug}/${product.child}`}
@@ -170,7 +170,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
               { icon: Lock, title: "Secure checkout", body: "Encrypted payments", href: undefined },
             ].map(({ icon: Icon, title, body, href }) => (
               <li key={title} className="flex items-start gap-3">
-                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-nav text-lime">
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary">
                   <Icon aria-hidden="true" className="size-[18px]" />
                 </span>
                 <span>

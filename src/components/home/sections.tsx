@@ -73,7 +73,7 @@ export function BrandCarousel() {
               <Link
                 href={`/brand/${brand.slug}`}
                 tabIndex={index >= shown.length ? -1 : undefined}
-                className="group flex h-20 min-w-44 items-center justify-center gap-3 rounded-xl border border-border px-6 text-muted-foreground transition-[color,border-color,background-color] duration-200 hover:border-brand hover:bg-primary-soft hover:text-foreground"
+                className="group flex h-20 min-w-44 items-center justify-center gap-3 rounded-xl border border-border px-6 text-muted-foreground transition-[color,border-color,background-color] duration-200 hover:border-foreground/30 hover:shadow-card"
               >
                 <BrandLogo brand={brand} />
               </Link>
@@ -119,7 +119,7 @@ export function WhyShopWithUs() {
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {items.map(({ icon: Icon, title, body }) => (
           <li key={title} className={`${cardClass} group transition-shadow duration-300 hover:shadow-lift`}>
-            <span className="grid size-12 place-items-center rounded-xl bg-nav text-lime transition-transform duration-300 group-hover:-rotate-6">
+            <span className="grid size-12 place-items-center rounded-xl bg-primary-soft text-primary">
               <Icon aria-hidden="true" className="size-6" />
             </span>
             <h3 className="mt-4 text-lg font-bold text-foreground">{title}</h3>

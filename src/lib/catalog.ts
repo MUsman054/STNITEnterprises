@@ -160,26 +160,27 @@ export const categories: Category[] = [
 /**
  * `logo`: monochrome SVG in /public/brands (Simple Icons artwork, viewBox cropped to the mark;
  * the trademarks belong to their owners). `wordmark`: the logo spells the name, so it is shown
- * on its own; symbol-only logos are shown with the name beside them.
+ * on its own; symbol-only logos are shown with the name beside them. `color`: the brand's logo
+ * colour (Simple Icons brand hex; Synology uses its dark wordmark colour instead of the light grey).
  */
-export type Brand = { slug: string; name: string; featured?: boolean; logo?: string; wordmark?: boolean };
+export type Brand = { slug: string; name: string; featured?: boolean; logo?: string; wordmark?: boolean; color?: string };
 
 export const brands: Brand[] = [
-  { slug: "dell", name: "Dell", featured: true, logo: "/brands/dell.svg", wordmark: true },
-  { slug: "hp", name: "HP", featured: true, logo: "/brands/hp.svg", wordmark: true },
-  { slug: "ibm", name: "IBM", featured: true, logo: "/brands/ibm.svg", wordmark: true },
-  { slug: "cisco", name: "Cisco", featured: true, logo: "/brands/cisco.svg", wordmark: true },
-  { slug: "seagate", name: "Seagate", featured: true, logo: "/brands/seagate.svg" },
-  { slug: "western-digital", name: "Western Digital", featured: true, logo: "/brands/western-digital.svg" },
-  { slug: "intel", name: "Intel", logo: "/brands/intel.svg", wordmark: true },
-  { slug: "samsung", name: "Samsung", logo: "/brands/samsung.svg", wordmark: true },
-  { slug: "kingston", name: "Kingston", logo: "/brands/kingston.svg" },
-  { slug: "supermicro", name: "Supermicro", logo: "/brands/supermicro.svg", wordmark: true },
-  { slug: "synology", name: "Synology", logo: "/brands/synology.svg", wordmark: true },
-  { slug: "aruba", name: "Aruba" },
-  { slug: "zebra", name: "Zebra", logo: "/brands/zebra.svg", wordmark: true },
-  { slug: "logitech", name: "Logitech", logo: "/brands/logitech.svg" },
-  { slug: "trendnet", name: "TRENDnet" },
+  { slug: "dell", name: "Dell", featured: true, logo: "/brands/dell.svg", wordmark: true, color: "#007DB8" },
+  { slug: "hp", name: "HP", featured: true, logo: "/brands/hp.svg", wordmark: true, color: "#0096D6" },
+  { slug: "ibm", name: "IBM", featured: true, logo: "/brands/ibm.svg", wordmark: true, color: "#052FAD" },
+  { slug: "cisco", name: "Cisco", featured: true, logo: "/brands/cisco.svg", wordmark: true, color: "#1BA0D7" },
+  { slug: "seagate", name: "Seagate", featured: true, logo: "/brands/seagate.svg", color: "#6EBE49" },
+  { slug: "western-digital", name: "Western Digital", featured: true, logo: "/brands/western-digital.svg", color: "#995DFF" },
+  { slug: "intel", name: "Intel", logo: "/brands/intel.svg", wordmark: true, color: "#0071C5" },
+  { slug: "samsung", name: "Samsung", logo: "/brands/samsung.svg", wordmark: true, color: "#1428A0" },
+  { slug: "kingston", name: "Kingston", logo: "/brands/kingston.svg", color: "#000000" },
+  { slug: "supermicro", name: "Supermicro", logo: "/brands/supermicro.svg", wordmark: true, color: "#151F6D" },
+  { slug: "synology", name: "Synology", logo: "/brands/synology.svg", wordmark: true, color: "#232323" },
+  { slug: "aruba", name: "Aruba", color: "#FF8300" },
+  { slug: "zebra", name: "Zebra", logo: "/brands/zebra.svg", wordmark: true, color: "#000000" },
+  { slug: "logitech", name: "Logitech", logo: "/brands/logitech.svg", color: "#00B8FC" },
+  { slug: "trendnet", name: "TRENDnet", color: "#0067B1" },
   { slug: "generic", name: "Generic" },
 ];
 

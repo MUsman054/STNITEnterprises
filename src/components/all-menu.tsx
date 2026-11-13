@@ -149,9 +149,9 @@ export function AllMenu({ open, onClose }: { open: boolean; onClose: () => void 
             <div className="mt-auto border-t border-border p-4">
               <a
                 href={site.contact.phoneHref}
-                className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-nav text-[15px] font-semibold text-white transition-colors duration-150 hover:bg-nav-2"
+                className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-semibold text-white transition-colors duration-150 hover:bg-primary-hover"
               >
-                <Phone aria-hidden="true" className="size-4 text-lime" />
+                <Phone aria-hidden="true" className="size-4" />
                 Call sales {site.contact.phone}
               </a>
             </div>

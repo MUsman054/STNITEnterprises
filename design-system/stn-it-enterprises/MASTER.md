@@ -18,7 +18,7 @@ The tokens below live in `src/app/globals.css` under `@theme` and are the source
 
 A B2B hardware store with its own look. It must not resemble Amazon or another big retailer:
 no superscript "$ cents" prices, no red "% off" badges, no "List price / You save" wording,
-no full-width "+ Add" pills, no three-column image/details/buy-box product page. Instead:
+no full-width "+ Add" pills, no lime-on-black icon tiles or chips on light pages (use `primary-soft` + `primary`), no three-column image/details/buy-box product page. Instead:
 charcoal header and footer, a dominant part-number search, part numbers shown in monospace,
 white cards on a neutral grey canvas, plain prices with green savings. No "pill with a dot"
 eyebrows or lime pill labels: eyebrows are plain uppercase text. The two logo
@@ -78,7 +78,7 @@ Rules: never white text on `brand`; on light hero use `foreground`/`primary-hove
 | Search with suggestions | `search-box.tsx` | ARIA combobox; popular searches on focus, live product/category suggestions, arrow keys + Enter |
 | All menu | `all-menu.tsx` | Phones/tablets. Main panel: 3 shortcuts (Deals, Wishlist, Account), 5 rows, call button. Categories (picture grid), Brands, Support open one sub-panel; focus moves to Back |
 | Product card | `product-card.tsx` | Bordered card; Refurb/New chip, dark "−N%" chip with lime text; brand + mono part # line; 2-line title; stock text + single-star rating; price stack; plain outlined "Add to cart" (becomes a stepper) |
-| Brand logos | `brand-mark.tsx` | `BrandMark` (mask, takes currentColor) and `BrandLogo` (wordmark alone, symbol + name, or monogram). SVGs in `public/brands` |
+| Brand logos | `brand-mark.tsx` | `BrandMark` (mask, takes currentColor) and `BrandLogo` (wordmark alone, symbol + name, or monogram), always in the brand's own colour (`Brand.color`). SVGs in `public/brands` |
 | Product rail | `product-rail.tsx` | Scroll-snap row with arrow buttons |
 | Filters | `product-listing.tsx` | Category, brand, price band, condition, rating, on sale; counts; chips; clear all |
 | Cart toast | `cart-toast.tsx` | After card adds; 5s, pauses on hover/focus; no focus steal |

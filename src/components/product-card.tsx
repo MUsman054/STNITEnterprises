@@ -95,7 +95,7 @@ export function ProductCard({ product, priority }: { product: Product; priority?
           {product.condition === "Refurbished" ? "Refurb" : "New"}
         </span>
         {discount !== null && (
-          <span className="pointer-events-none absolute bottom-2.5 left-2.5 rounded-full bg-nav px-2.5 py-1 text-[12px] font-bold text-lime tabular-nums">
+          <span className="pointer-events-none absolute bottom-2.5 left-2.5 rounded-full bg-background px-2.5 py-1 text-[12px] font-bold text-primary shadow-card tabular-nums">
             −{discount}%
           </span>
         )}
