@@ -5,8 +5,8 @@ Tailwind CSS 4, TypeScript, PostgreSQL (Drizzle ORM), Stripe and Resend.
 
 ## Run it locally
 
-You need [Node.js](https://nodejs.org) 20 or newer and a PostgreSQL database
-(a free [Neon](https://neon.tech) database works, or Postgres on your machine).
+You need [Node.js](https://nodejs.org) 20 or newer. Nothing else: locally the site uses
+PGlite, a full PostgreSQL that runs inside Node and saves to `.data/pglite`.
 
 ```bash
 npm install
@@ -14,6 +14,9 @@ cp .env.example .env.local      # then fill in the values
 npm run db:migrate              # creates the tables
 npm run dev
 ```
+
+With the local database only one program can open it at a time: stop `npm run dev` before
+running `npm run db:migrate` or `npm run make-admin`.
 
 Then open http://localhost:3000. For a production build: `npm run build` then `npm start`.
 
@@ -23,7 +26,9 @@ Card payments locally: install the [Stripe CLI](https://docs.stripe.com/stripe-c
 
 ## Going live
 
-1. **Database:** create a production Postgres database, set `DATABASE_URL`, run `npm run db:migrate`.
+1. **Database:** create a hosted PostgreSQL database (e.g. [Neon](https://neon.tech)), set
+   `DATABASE_URL=postgres://...`, run `npm run db:migrate`. The local `pglite:` database is
+   for development only and is refused on Vercel.
 2. **Stripe:** set the live `STRIPE_SECRET_KEY`. Add a webhook endpoint
    `https://<your-domain>/api/stripe/webhook` for the events `checkout.session.completed`,
    `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`

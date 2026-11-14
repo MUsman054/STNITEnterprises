@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { OrderConfirmationView, OrderNotFound } from "@/components/order-confirmation-view";
 import { config } from "@/server/env";
@@ -32,6 +33,8 @@ export default function OrderConfirmationPage({ searchParams }: PageProps<"/orde
 
 async function OrderDetails({ searchParams }: { searchParams: PageProps<"/order-confirmation">["searchParams"] }) {
   const params = await searchParams;
+  // Live order data (status can change at any moment): always render per request.
+  await connection();
   const token = typeof params.order === "string" ? params.order : "";
   const sessionId = typeof params.session_id === "string" ? params.session_id : "";
 
