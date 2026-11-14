@@ -1,0 +1,180 @@
+import { sql } from "drizzle-orm";
+import { index, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+
+/**
+ * Database schema. Money is stored in integer cents to avoid floating-point errors.
+ * Secrets that act as credentials (session tokens, reset tokens, order access tokens) are
+ * stored only as SHA-256 hashes, so a database leak does not let anyone sign in or open
+ * orders.
+ */
+
+const timestamps = {
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+};
+
+// ---------- accounts ----------
+
+export const userRole = pgEnum("user_role", ["customer", "admin"]);
+
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  /** Always stored lower-cased and trimmed. */
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  company: text("company"),
+  passwordHash: text("password_hash").notNull(),
+  role: userRole("role").notNull().default("customer"),
+  ...timestamps,
+});
+
+export const sessions = pgTable(
+  "sessions",
+  {
+    /** SHA-256 of the cookie token. */
+    id: text("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("sessions_user_idx").on(table.userId)],
+);
+
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    /** SHA-256 of the emailed token. */
+    id: text("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("password_reset_user_idx").on(table.userId)],
+);
+
+// ---------- orders ----------
+
+export const paymentMethod = pgEnum("payment_method", ["card", "bank"]);
+
+export const orderStatus = pgEnum("order_status", [
+  "pending_payment",
+  "awaiting_bank_transfer",
+  "paid",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "refunded",
+]);
+
+export const orders = pgTable(
+  "orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    number: text("number").notNull().unique(),
+    /** SHA-256 of the token in the customer's confirmation link. */
+    accessTokenHash: text("access_token_hash").notNull().unique(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    status: orderStatus("status").notNull(),
+    paymentMethod: paymentMethod("payment_method").notNull(),
+
+    email: text("email").notNull(),
+    phone: text("phone").notNull(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    company: text("company"),
+    address1: text("address1").notNull(),
+    address2: text("address2"),
+    city: text("city").notNull(),
+    state: text("state").notNull(),
+    zip: text("zip").notNull(),
+    notes: text("notes"),
+
+    currency: text("currency").notNull().default("usd"),
+    subtotalCents: integer("subtotal_cents").notNull(),
+    shippingCents: integer("shipping_cents").notNull(),
+    totalCents: integer("total_cents").notNull(),
+
+    stripeSessionId: text("stripe_session_id").unique(),
+    stripePaymentIntentId: text("stripe_payment_intent_id"),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+
+    carrier: text("carrier"),
+    trackingNumber: text("tracking_number"),
+    ...timestamps,
+  },
+  (table) => [
+    index("orders_user_idx").on(table.userId),
+    index("orders_status_idx").on(table.status),
+    index("orders_created_idx").on(table.createdAt),
+  ],
+);
+
+export const orderItems = pgTable(
+  "order_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    productSlug: text("product_slug").notNull(),
+    productName: text("product_name").notNull(),
+    mpn: text("mpn").notNull(),
+    unitPriceCents: integer("unit_price_cents").notNull(),
+    quantity: integer("quantity").notNull(),
+    lineTotalCents: integer("line_total_cents").notNull(),
+  },
+  (table) => [index("order_items_order_idx").on(table.orderId)],
+);
+
+// ---------- inquiries and newsletter ----------
+
+export const inquiryKind = pgEnum("inquiry_kind", ["contact", "quote", "part"]);
+export const inquiryStatus = pgEnum("inquiry_status", ["new", "handled"]);
+
+export const inquiries = pgTable(
+  "inquiries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: inquiryKind("kind").notNull(),
+    status: inquiryStatus("status").notNull().default("new"),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    partNumber: text("part_number"),
+    quantity: integer("quantity"),
+    targetPriceCents: integer("target_price_cents"),
+    message: text("message"),
+    ...timestamps,
+  },
+  (table) => [index("inquiries_status_idx").on(table.status), index("inquiries_created_idx").on(table.createdAt)],
+);
+
+export const newsletterSubscribers = pgTable("newsletter_subscribers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
+});
+
+// ---------- abuse protection ----------
+
+export const rateLimits = pgTable("rate_limits", {
+  /** "<action>:<sha256 of ip or email>" — raw IPs and emails are never stored here. */
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull().default(sql`now()`),
+});
+
+export type User = typeof users.$inferSelect;
+export type Order = typeof orders.$inferSelect;
+export type OrderItem = typeof orderItems.$inferSelect;
+export type OrderStatus = (typeof orderStatus.enumValues)[number];
+export type Inquiry = typeof inquiries.$inferSelect;

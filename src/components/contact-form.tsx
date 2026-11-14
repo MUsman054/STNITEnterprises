@@ -1,20 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { CircleCheck } from "lucide-react";
+import { submitContact } from "@/actions/forms";
+import { Honeypot } from "@/components/honeypot";
 import { btnPrimary, inputClass, labelClass } from "@/lib/ui";
 
 type Values = { name: string; email: string; message: string };
 type Errors = Partial<Record<keyof Values, string>>;
 
-/**
- * Contact form. Validates in the browser only: it is NOT connected to email yet.
- * Wire `handleSubmit` to the client's form/email service before launch.
- */
+/** Contact form: validated here for quick feedback, then saved and emailed by the server. */
 export function ContactForm() {
   const [values, setValues] = useState<Values>({ name: "", email: "", message: "" });
   const [errors, setErrors] = useState<Errors>({});
   const [done, setDone] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [website, setWebsite] = useState("");
+  const [sending, startTransition] = useTransition();
 
   function update(name: keyof Values, value: string) {
     setValues((current) => ({ ...current, [name]: value }));
@@ -36,7 +38,13 @@ export function ContactForm() {
       document.getElementById(`contact-${first}`)?.focus();
       return;
     }
-    setDone(true);
+    setFormError("");
+    startTransition(async () => {
+      const result = await submitContact({ ...values, website });
+      if (result.ok) return setDone(true);
+      setErrors((result.fieldErrors ?? {}) as Errors);
+      setFormError(result.error ?? (result.fieldErrors ? "" : "Your message couldn't be sent. Please try again."));
+    });
   }
 
   if (done) {
@@ -44,10 +52,10 @@ export function ContactForm() {
       <div role="status" className="animate-fade-up rounded-2xl bg-primary-soft p-6">
         <p className="flex items-center gap-3 text-lg font-semibold text-primary">
           <CircleCheck aria-hidden="true" className="size-6 shrink-0" />
-          Thanks, {values.name.trim().split(" ")[0]}. Your message is ready.
+          Thanks, {values.name.trim().split(" ")[0]}. Your message was sent.
         </p>
         <p className="mt-2 text-[15px] text-foreground">
-          Demo note: this form isn&apos;t connected to email yet, so nothing was sent.
+          We&apos;ll reply to {values.email.trim()} as soon as we can, usually within one business day.
         </p>
       </div>
     );
@@ -61,7 +69,13 @@ export function ContactForm() {
     ) : null;
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="grid gap-5">
+    <form onSubmit={handleSubmit} noValidate className="relative grid gap-5">
+      <Honeypot value={website} onChange={setWebsite} />
+      {formError && (
+        <p role="alert" className="rounded-2xl border border-sale/40 bg-sale/5 p-4 font-semibold text-sale">
+          {formError}
+        </p>
+      )}
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label htmlFor="contact-name" className={labelClass}>
@@ -119,8 +133,8 @@ export function ContactForm() {
         {errorText("message")}
       </div>
       <div>
-        <button type="submit" className={btnPrimary}>
-          Send message
+        <button type="submit" disabled={sending} className={`${btnPrimary} disabled:opacity-70`}>
+          {sending ? "Sending…" : "Send message"}
         </button>
       </div>
     </form>

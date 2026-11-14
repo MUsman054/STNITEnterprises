@@ -1,113 +1,43 @@
-"use client";
-
-import { useSyncExternalStore } from "react";
-
 /**
- * The most recent order, kept in sessionStorage so the confirmation page can show it.
- * DEMO ONLY: nothing is sent to a server and no payment is taken. Replace `saveOrder`
- * with a call to the real order/payment backend when the gateway is connected.
+ * Order constants shared by the browser and the server. Orders themselves live in the
+ * database (src/server/orders.ts); nothing personal is stored in the browser.
  */
 
-export type PaymentMethodId = "card" | "paypal" | "bank";
+export type PaymentMethodId = "card" | "bank";
 
 export const paymentMethods: { id: PaymentMethodId; label: string; note: string }[] = [
   {
     id: "card",
     label: "Credit or debit card",
-    note: "The secure Stripe card form will appear here once the payment gateway is connected.",
-  },
-  {
-    id: "paypal",
-    label: "PayPal",
-    note: "You will be redirected to PayPal to approve the payment once the gateway is connected.",
+    note: "You'll pay on Stripe's secure checkout page (cards, Apple Pay, Google Pay). We never see or store your card details.",
   },
   {
     id: "bank",
     label: "Bank transfer",
-    note: "Bank details will be included with the order confirmation once payments are set up.",
+    note: "We'll email our bank details with your order number. Your order ships once the payment arrives.",
   },
 ];
 
-export type Order = {
-  number: string;
-  placedAt: string;
-  email: string;
-  name: string;
-  addressLines: string[];
-  paymentMethod: PaymentMethodId;
-  notes: string;
-  lines: { slug: string; name: string; qty: number; price: number }[];
-  subtotal: number;
-  shipping: number;
-  total: number;
+export type OrderStatus =
+  | "pending_payment"
+  | "awaiting_bank_transfer"
+  | "paid"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled"
+  | "refunded";
+
+export const orderStatusLabel: Record<OrderStatus, string> = {
+  pending_payment: "Awaiting payment",
+  awaiting_bank_transfer: "Awaiting bank transfer",
+  paid: "Paid",
+  processing: "Processing",
+  shipped: "Shipped",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+  refunded: "Refunded",
 };
-
-const STORAGE_KEY = "stn-last-order-v1";
-const noopSubscribe = () => () => {};
-
-let cachedRaw: string | null | undefined;
-let cachedOrder: Order | null = null;
-
-function read(): Order | null {
-  let raw: string | null = null;
-  try {
-    raw = window.sessionStorage.getItem(STORAGE_KEY);
-  } catch {
-    raw = null;
-  }
-  if (raw === cachedRaw) return cachedOrder;
-  cachedRaw = raw;
-  try {
-    cachedOrder = raw ? (JSON.parse(raw) as Order) : null;
-  } catch {
-    cachedOrder = null;
-  }
-  return cachedOrder;
-}
-
-const HISTORY_KEY = "stn-orders-v1";
-
-export function saveOrder(order: Order) {
-  try {
-    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(order));
-    // Order history for the "Order History" page (this browser only, until accounts exist).
-    const history = JSON.parse(window.localStorage.getItem(HISTORY_KEY) ?? "[]");
-    const next = [order, ...(Array.isArray(history) ? history : [])].slice(0, 50);
-    window.localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
-  } catch {
-    // Without storage the confirmation page falls back to a generic message.
-  }
-}
-
-let cachedHistoryRaw: string | null | undefined;
-let cachedHistory: Order[] = [];
-const EMPTY_HISTORY: Order[] = [];
-
-function readHistory(): Order[] {
-  let raw: string | null = null;
-  try {
-    raw = window.localStorage.getItem(HISTORY_KEY);
-  } catch {
-    raw = null;
-  }
-  if (raw === cachedHistoryRaw) return cachedHistory;
-  cachedHistoryRaw = raw;
-  try {
-    const parsed = raw ? JSON.parse(raw) : [];
-    cachedHistory = Array.isArray(parsed) ? (parsed as Order[]) : EMPTY_HISTORY;
-  } catch {
-    cachedHistory = EMPTY_HISTORY;
-  }
-  return cachedHistory;
-}
-
-export function useOrderHistory(): Order[] {
-  return useSyncExternalStore(noopSubscribe, readHistory, () => EMPTY_HISTORY);
-}
-
-export function useLastOrder(): Order | null {
-  return useSyncExternalStore(noopSubscribe, read, () => null);
-}
 
 export const usStates: [code: string, name: string][] = [
   ["AL", "Alabama"], ["AK", "Alaska"], ["AZ", "Arizona"], ["AR", "Arkansas"], ["CA", "California"],

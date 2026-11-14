@@ -2,14 +2,14 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { CircleCheck, FileText, X } from "lucide-react";
+import { submitRequest } from "@/actions/forms";
+import { Honeypot } from "@/components/honeypot";
 import type { Product } from "@/lib/catalog";
-import { site } from "@/lib/site";
 import { btnOutline, btnPrimary, inputClass, labelClass } from "@/lib/ui";
 
 /*
- * Quote requests and part requests. These validate in the browser but are NOT sent
- * anywhere yet: connect `submitRequest` to the client's email service or CRM (for example
- * an API route that emails sales@) when the backend is set up.
+ * Quote requests and part requests: validated here, then saved and emailed to the sales
+ * team by the server (src/actions/forms.ts).
  */
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -28,13 +28,6 @@ type FieldDef = {
   half?: boolean;
 };
 
-async function submitRequest(kind: "quote" | "part", values: Record<string, string>) {
-  // DEMO: replace with a POST to the backend.
-  void kind;
-  void values;
-  await new Promise((resolve) => setTimeout(resolve, 500));
-}
-
 function RequestForm({
   kind,
   fields,
@@ -52,6 +45,8 @@ function RequestForm({
   const [values, setValues] = useState<Record<string, string>>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
+  const [formError, setFormError] = useState("");
+  const [website, setWebsite] = useState("");
 
   function validate() {
     const found: Record<string, string> = {};
@@ -77,8 +72,16 @@ function RequestForm({
       return;
     }
     setState("sending");
-    await submitRequest(kind, values);
-    setState("done");
+    setFormError("");
+    try {
+      const result = await submitRequest({ ...values, kind, website });
+      if (result.ok) return setState("done");
+      setErrors(result.fieldErrors ?? {});
+      setFormError(result.error ?? (result.fieldErrors ? "" : "Your request couldn't be sent. Please try again."));
+    } catch {
+      setFormError("Your request couldn't be sent. Check your connection and try again.");
+    }
+    setState("idle");
   }
 
   if (state === "done") {
@@ -86,13 +89,10 @@ function RequestForm({
       <div role="status" className="animate-fade-up rounded-2xl bg-primary-soft p-5">
         <p className="flex items-center gap-2.5 text-lg font-bold text-primary">
           <CircleCheck aria-hidden="true" className="size-6 shrink-0" />
-          {kind === "quote" ? "Quote request ready" : "Part request ready"}
+          {kind === "quote" ? "Quote request sent" : "Part request sent"}
         </p>
         <p className="mt-2 text-[15px] text-foreground">
           Thanks, {(values.name ?? "").trim().split(" ")[0]}. Our team will get back to you at {values.email}.
-        </p>
-        <p className="mt-2 text-[13px] text-muted-foreground">
-          Demo note: this form isn&apos;t connected yet, so nothing was sent. You can reach us now at {site.contact.salesEmail}.
         </p>
         {onDone && (
           <button type="button" onClick={onDone} className={`${btnOutline} mt-4`}>
@@ -104,7 +104,13 @@ function RequestForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={handleSubmit} noValidate className="relative grid gap-4 sm:grid-cols-2">
+      <Honeypot value={website} onChange={setWebsite} />
+      {formError && (
+        <p role="alert" className="rounded-2xl border border-sale/40 bg-sale/5 p-4 font-semibold text-sale sm:col-span-2">
+          {formError}
+        </p>
+      )}
       {fields.map((field) => {
         const id = `${formId}-${field.name}`;
         const error = errors[field.name];

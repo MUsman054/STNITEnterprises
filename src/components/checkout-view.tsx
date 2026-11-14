@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { CreditCard, Info, Landmark, Lock, ShoppingBag, Wallet } from "lucide-react";
-import { clearCart, useCart } from "@/lib/cart-store";
-import { paymentMethods, saveOrder, usStates, type Order, type PaymentMethodId } from "@/lib/order";
+import { useState, useTransition } from "react";
+import { CreditCard, Info, Landmark, Lock, ShoppingBag } from "lucide-react";
+import { placeOrder } from "@/actions/checkout";
+import { useCart } from "@/lib/cart-store";
+import { paymentMethods, usStates, type PaymentMethodId } from "@/lib/order";
 import { formatPrice, site } from "@/lib/site";
 import { btnPrimary, cardClass, inputClass, labelClass } from "@/lib/ui";
 import { ProductImage } from "@/components/product-image";
@@ -70,7 +71,6 @@ function validate(values: Values, agree: boolean): Errors {
 
 const paymentIcons: Record<PaymentMethodId, typeof CreditCard> = {
   card: CreditCard,
-  paypal: Wallet,
   bank: Landmark,
 };
 
@@ -121,14 +121,18 @@ const stepHeading = "flex items-center gap-3 text-lg font-bold text-foreground";
 const stepNumber =
   "grid size-8 shrink-0 place-items-center rounded-full bg-primary font-sans text-sm font-bold text-white";
 
-export function CheckoutView() {
+export function CheckoutView({ enabledMethods }: { enabledMethods: PaymentMethodId[] }) {
   const router = useRouter();
   const { items, subtotal, hydrated } = useCart();
+  const methods = paymentMethods.filter((method) => enabledMethods.includes(method.id));
   const [values, setValues] = useState<Values>(emptyValues);
-  const [payment, setPayment] = useState<PaymentMethodId>("card");
+  const [payment, setPayment] = useState<PaymentMethodId>(methods[0]?.id ?? "card");
   const [agree, setAgree] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
-  const [placing, setPlacing] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [redirecting, setRedirecting] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const placing = pending || redirecting;
 
   const total = subtotal + site.shipping.cost;
   const errorCount = Object.keys(errors).length;
@@ -146,6 +150,8 @@ export function CheckoutView() {
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (placing) return;
+    setFormError("");
     const found = validate(values, agree);
     setErrors(found);
 
@@ -155,38 +161,43 @@ export function CheckoutView() {
       return;
     }
 
-    const order: Order = {
-      number: `STN-${Date.now().toString(36).toUpperCase().slice(-7)}`,
-      placedAt: new Date().toISOString(),
-      email: values.email.trim(),
-      name: `${values.firstName.trim()} ${values.lastName.trim()}`,
-      addressLines: [
-        values.company.trim(),
-        values.address1.trim(),
-        values.address2.trim(),
-        `${values.city.trim()}, ${values.state} ${values.zip.trim()}`,
-      ].filter(Boolean),
-      paymentMethod: payment,
-      notes: values.notes.trim(),
-      lines: items.map(({ product, qty }) => ({
-        slug: product.slug,
-        name: product.name,
-        qty,
-        price: product.price,
-      })),
-      subtotal,
-      shipping: site.shipping.cost,
-      total,
-    };
-
-    // DEMO: this is where the payment gateway and order API will be called.
-    setPlacing(true);
-    saveOrder(order);
-    router.push("/order-confirmation");
-    clearCart({ silent: true });
+    // Only product slugs and quantities are sent; the server prices the order itself.
+    startTransition(async () => {
+      const result = await placeOrder({
+        ...values,
+        agree,
+        payment,
+        lines: items.map(({ product, qty }) => ({ slug: product.slug, qty })),
+      });
+      if (!result.ok) {
+        const serverErrors = (result.fieldErrors ?? {}) as Errors;
+        setErrors(serverErrors);
+        setFormError(result.error ?? "");
+        const first = fieldOrder.find((name) => serverErrors[name]);
+        if (first) document.getElementById(`checkout-${first}`)?.focus();
+        else window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      setRedirecting(true);
+      // The cart is cleared on the confirmation page, so it survives a cancelled card payment.
+      if (result.redirectUrl.startsWith("https://")) window.location.assign(result.redirectUrl);
+      else router.push(result.redirectUrl);
+    });
   }
 
-  if (!hydrated || placing) {
+  if (methods.length === 0) {
+    return (
+      <div className="rounded-2xl bg-background px-6 py-14 text-center shadow-card">
+        <h2 className="text-2xl font-semibold text-foreground">Online checkout is temporarily unavailable</h2>
+        <p className="mx-auto mt-2 max-w-md text-muted-foreground">
+          Please email <a className="font-semibold text-primary underline" href={`mailto:${site.contact.salesEmail}`}>{site.contact.salesEmail}</a> or
+          call <a className="font-semibold text-primary underline" href={site.contact.phoneHref}>{site.contact.phone}</a> to place your order.
+        </p>
+      </div>
+    );
+  }
+
+  if (!hydrated || redirecting) {
     return (
       <div aria-busy="true" className="grid gap-5 lg:grid-cols-[1fr_380px]">
         <div className="h-96 animate-pulse rounded-2xl bg-background" />
@@ -220,14 +231,12 @@ export function CheckoutView() {
       className="grid items-start gap-5 lg:grid-cols-[1fr_380px]"
     >
       <div className="space-y-4">
-        <p className="flex items-start gap-3 rounded-2xl border border-brand/40 bg-primary-soft p-4 text-[15px] text-foreground">
-          <Info aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
-          <span>
-            <strong className="font-semibold">Demo checkout.</strong> The payment gateway isn&apos;t
-            connected yet, so placing an order here doesn&apos;t charge anything or send a real
-            order.
-          </span>
-        </p>
+        {formError && (
+          <p role="alert" className="flex items-start gap-3 rounded-2xl border border-sale/40 bg-sale/5 p-4 font-semibold text-sale">
+            <Info aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+            {formError}
+          </p>
+        )}
 
         {errorCount > 0 && (
           <p role="alert" className="rounded-2xl border border-sale/40 bg-sale/5 p-4 font-semibold text-sale">
@@ -382,7 +391,7 @@ export function CheckoutView() {
             Payment method
           </legend>
           <div className="mt-5 space-y-3">
-            {paymentMethods.map((method) => {
+            {methods.map((method) => {
               const Icon = paymentIcons[method.id];
               const selected = payment === method.id;
               return (
@@ -408,10 +417,7 @@ export function CheckoutView() {
                   </label>
                   {selected && (
                     <div className="animate-fade-up px-4 pb-4">
-                      <p className="rounded-xl border border-dashed border-primary/50 bg-background p-4 text-[15px] text-muted-foreground">
-                        <span className="mb-1 block text-[13px] font-bold tracking-wider text-primary uppercase">
-                          Payment gateway placeholder
-                        </span>
+                      <p className="rounded-xl border border-border bg-background p-4 text-[15px] text-muted-foreground">
                         {method.note}
                       </p>
                     </div>
@@ -520,14 +526,16 @@ export function CheckoutView() {
             <span>
               I agree to the{" "}
               <Link
-                href="/support/terms-condition"
+                href="/support/terms-conditions"
+                target="_blank"
                 className="font-semibold text-primary underline decoration-brand decoration-2 underline-offset-4"
               >
-                Terms &amp; Condition
+                Terms &amp; Conditions
               </Link>{" "}
               and{" "}
               <Link
-                href="/support/return-refund-shipping-policies"
+                href="/support/return-policy"
+                target="_blank"
                 className="font-semibold text-primary underline decoration-brand decoration-2 underline-offset-4"
               >
                 Return/Refund policy
@@ -542,10 +550,17 @@ export function CheckoutView() {
           )}
         </div>
 
-        <button type="submit" className={`${btnPrimary} mt-5 w-full`}>
+        <button type="submit" disabled={placing} aria-busy={placing || undefined} className={`${btnPrimary} mt-5 w-full disabled:opacity-70`}>
           <Lock aria-hidden="true" className="size-4" />
-          Place order · {formatPrice(total)}
+          {placing
+            ? "Placing your order…"
+            : payment === "card"
+              ? `Continue to payment · ${formatPrice(total)}`
+              : `Place order · ${formatPrice(total)}`}
         </button>
+        {payment === "card" && (
+          <p className="mt-3 text-center text-[13px] text-muted-foreground">You&apos;ll be taken to Stripe to pay securely.</p>
+        )}
       </section>
     </form>
   );

@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState } from "react";
-import { Heart, Info, Package, ShoppingCart } from "lucide-react";
+import { useId, useState, useTransition } from "react";
+import { CircleCheck, Heart, Package, ShoppingCart } from "lucide-react";
+import { login, requestPasswordReset, resetPassword, signup } from "@/actions/auth";
 import { addToCart } from "@/lib/cart-store";
 import { brandName, getProduct, type Product } from "@/lib/catalog";
-import { paymentMethods, useOrderHistory } from "@/lib/order";
-import { formatPrice } from "@/lib/site";
 import { removeFromWishlist, useWishlist } from "@/lib/wishlist-store";
 import { useHydrated } from "@/lib/cart-store";
 import { btnOutline, btnPrimary, cardClass, inputClass, labelClass } from "@/lib/ui";
@@ -15,20 +14,71 @@ import { ProductImage } from "@/components/product-image";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/**
- * Login / Signup. Customer accounts need a backend (authentication + database), which is
- * not built yet: the forms validate, then explain that accounts are coming. Wire them to
- * the auth provider chosen for the backend.
- */
-export function AuthView() {
+function FormAlert({ message }: { message: string }) {
+  if (!message) return null;
+  return (
+    <p role="alert" className="rounded-2xl border border-sale/40 bg-sale/5 p-4 text-[15px] font-semibold text-sale">
+      {message}
+    </p>
+  );
+}
+
+function Field({
+  id,
+  label,
+  type = "text",
+  autoComplete,
+  value,
+  error,
+  optional,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  type?: string;
+  autoComplete: string;
+  value: string;
+  error?: string;
+  optional?: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className={labelClass}>
+        {label}
+        {optional && <span className="ml-1.5 font-normal text-muted-foreground">(optional)</span>}
+      </label>
+      <input
+        id={id}
+        type={type}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
+        className={inputClass}
+      />
+      {error && (
+        <p id={`${id}-error`} className="mt-1.5 text-sm font-medium text-sale">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Login / Signup, backed by src/actions/auth.ts. `next` is where to go after signing in. */
+export function AuthView({ next }: { next?: string }) {
   const [tab, setTab] = useState<"login" | "signup">("login");
   const base = useId();
   const [values, setValues] = useState({ name: "", email: "", password: "", company: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [pending, startTransition] = useTransition();
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
     const found: Record<string, string> = {};
     if (tab === "signup" && !values.name.trim()) found.name = "Enter your name.";
     if (!values.email.trim()) found.email = "Enter your email address.";
@@ -36,39 +86,40 @@ export function AuthView() {
     if (!values.password) found.password = "Enter your password.";
     else if (tab === "signup" && values.password.length < 8) found.password = "Use at least 8 characters.";
     setErrors(found);
+    setFormError("");
     const first = ["name", "email", "password"].find((key) => found[key]);
     if (first) {
       document.getElementById(`${base}-${first}`)?.focus();
       return;
     }
-    setSubmitted(true);
+    startTransition(async () => {
+      // On success the action redirects, so only failures come back here.
+      const result =
+        tab === "login"
+          ? await login({ email: values.email, password: values.password }, next)
+          : await signup(values, next);
+      if (!result.ok) {
+        setErrors(result.fieldErrors ?? {});
+        setFormError(result.error ?? "");
+        setValues((current) => ({ ...current, password: "" }));
+      }
+    });
   }
 
   const field = (name: keyof typeof values, label: string, type: string, autoComplete: string, optional = false) => (
-    <div>
-      <label htmlFor={`${base}-${name}`} className={labelClass}>
-        {label}
-        {optional && <span className="ml-1.5 font-normal text-muted-foreground">(optional)</span>}
-      </label>
-      <input
-        id={`${base}-${name}`}
-        type={type}
-        autoComplete={autoComplete}
-        value={values[name]}
-        onChange={(event) => {
-          setValues((current) => ({ ...current, [name]: event.target.value }));
-          if (errors[name]) setErrors((current) => ({ ...current, [name]: "" }));
-        }}
-        aria-invalid={errors[name] ? true : undefined}
-        aria-describedby={errors[name] ? `${base}-${name}-error` : undefined}
-        className={inputClass}
-      />
-      {errors[name] && (
-        <p id={`${base}-${name}-error`} className="mt-1.5 text-sm font-medium text-sale">
-          {errors[name]}
-        </p>
-      )}
-    </div>
+    <Field
+      id={`${base}-${name}`}
+      label={label}
+      type={type}
+      autoComplete={autoComplete}
+      optional={optional}
+      value={values[name]}
+      error={errors[name]}
+      onChange={(value) => {
+        setValues((current) => ({ ...current, [name]: value }));
+        if (errors[name]) setErrors((current) => ({ ...current, [name]: "" }));
+      }}
+    />
   );
 
   return (
@@ -87,7 +138,7 @@ export function AuthView() {
               onClick={() => {
                 setTab(key);
                 setErrors({});
-                setSubmitted(false);
+                setFormError("");
               }}
               className={`min-h-11 rounded-full text-[15px] font-semibold transition-colors duration-200 ${tab === key ? "bg-background text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
             >
@@ -96,25 +147,22 @@ export function AuthView() {
           ))}
         </div>
 
-        {submitted ? (
-          <div role="status" className="animate-fade-up mt-6 flex items-start gap-3 rounded-2xl bg-primary-soft p-5 text-[15px] text-foreground">
-            <Info aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
-            <span>
-              <strong className="font-semibold">Customer accounts are coming soon.</strong> They&apos;ll be switched on with the store&apos;s
-              backend. Until then you can check out as a guest, and your orders and wishlist are saved on this device.
-            </span>
-          </div>
-        ) : (
-          <form onSubmit={submit} noValidate className="mt-6 grid gap-4">
-            {tab === "signup" && field("name", "Full name", "text", "name")}
-            {tab === "signup" && field("company", "Company", "text", "organization", true)}
-            {field("email", "Email address", "email", "email")}
-            {field("password", "Password", "password", tab === "login" ? "current-password" : "new-password")}
-            <button type="submit" className={`${btnPrimary} min-h-12 w-full`}>
-              {tab === "login" ? "Sign in" : "Create account"}
-            </button>
-          </form>
-        )}
+        <form onSubmit={submit} noValidate className="mt-6 grid gap-4">
+          <FormAlert message={formError} />
+          {tab === "signup" && field("name", "Full name", "text", "name")}
+          {tab === "signup" && field("company", "Company", "text", "organization", true)}
+          {field("email", "Email address", "email", "email")}
+          {field("password", "Password", "password", tab === "login" ? "current-password" : "new-password")}
+          {tab === "login" && (
+            <Link href="/account/forgot-password" className="-mt-1 justify-self-start py-1 text-[14px] font-semibold text-primary underline-offset-4 hover:underline">
+              Forgot your password?
+            </Link>
+          )}
+          <button type="submit" disabled={pending} className={`${btnPrimary} min-h-12 w-full disabled:opacity-70`}>
+            {pending ? "Please wait…" : tab === "login" ? "Sign in" : "Create account"}
+          </button>
+          <p className="text-center text-[13px] text-muted-foreground">You can also check out as a guest without an account.</p>
+        </form>
       </section>
 
       <aside className={`${cardClass} self-start`} aria-label="Account shortcuts">
@@ -204,67 +252,88 @@ export function WishlistView() {
   );
 }
 
-export function OrderHistoryView() {
-  const hydrated = useHydrated();
-  const orders = useOrderHistory();
+/** "Forgot password" form. Always shows the same confirmation, so it can't reveal who has an account. */
+export function ForgotPasswordForm() {
+  const base = useId();
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
+  const [done, setDone] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!emailPattern.test(email.trim())) {
+      setError("Enter a valid email address.");
+      document.getElementById(`${base}-email`)?.focus();
+      return;
+    }
+    setError("");
+    setFormError("");
+    startTransition(async () => {
+      const result = await requestPasswordReset({ email });
+      if (result.ok) return setDone(true);
+      setError(result.fieldErrors?.email ?? "");
+      setFormError(result.error ?? "");
+    });
+  }
+
+  if (done) {
+    return (
+      <p role="status" className="animate-fade-up mt-6 flex items-start gap-3 rounded-2xl bg-primary-soft p-5 text-[15px] text-foreground">
+        <CircleCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+        If an account exists for {email.trim()}, we&apos;ve sent a link to reset the password. It expires in 1 hour. Check your spam folder if you don&apos;t see it.
+      </p>
+    );
+  }
 
   return (
-    <section className={`${cardClass} mt-2`} aria-labelledby="orders-title">
-      <h1 id="orders-title" className="border-b border-border pb-3 text-[26px] font-bold text-foreground">
-        Order History
-      </h1>
-      <p className="mt-3 flex items-start gap-2 text-[14px] text-muted-foreground">
-        <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-        Orders placed on this device are listed here. Once customer accounts are switched on, your full history will follow you.
-      </p>
-      {!hydrated ? (
-        <div aria-busy="true" className="mt-4 h-40 animate-pulse rounded-xl bg-surface" />
-      ) : orders.length === 0 ? (
-        <div className="py-12 text-center">
-          <span className="mx-auto grid size-16 place-items-center rounded-full bg-primary-soft text-primary">
-            <Package aria-hidden="true" className="size-7" />
-          </span>
-          <p className="mt-4 text-xl font-bold text-foreground">No orders yet</p>
-          <Link href="/shop" className={`${btnPrimary} mt-5`}>
-            Start shopping
-          </Link>
-        </div>
-      ) : (
-        <ul className="mt-4 space-y-3">
-          {orders.map((order) => (
-            <li key={order.number} className="animate-fade-in overflow-hidden rounded-xl border border-border">
-              <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 bg-surface px-4 py-3 text-[13px]">
-                <span>
-                  <span className="block text-muted-foreground">Order placed</span>
-                  <span className="font-semibold text-foreground">{new Date(order.placedAt).toLocaleDateString("en-US", { dateStyle: "medium" })}</span>
-                </span>
-                <span>
-                  <span className="block text-muted-foreground">Total</span>
-                  <span className="font-semibold text-foreground">{formatPrice(order.total)}</span>
-                </span>
-                <span>
-                  <span className="block text-muted-foreground">Payment</span>
-                  <span className="font-semibold text-foreground">{paymentMethods.find((m) => m.id === order.paymentMethod)?.label}</span>
-                </span>
-                <span className="ml-auto">
-                  <span className="block text-muted-foreground">Order #</span>
-                  <span className="font-semibold text-foreground">{order.number}</span>
-                </span>
-              </div>
-              <ul className="divide-y divide-border px-4">
-                {order.lines.map((line) => (
-                  <li key={line.slug} className="flex items-center justify-between gap-4 py-3 text-[15px]">
-                    <Link href={`/product/${line.slug}`} className="-my-1.5 min-w-0 py-3 text-foreground hover:text-primary hover:underline">
-                      {line.name} <span className="text-muted-foreground">× {line.qty}</span>
-                    </Link>
-                    <span className="shrink-0 font-semibold tabular-nums">{formatPrice(line.price * line.qty)}</span>
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+    <form onSubmit={submit} noValidate className="mt-6 grid gap-4">
+      <FormAlert message={formError} />
+      <Field id={`${base}-email`} label="Email address" type="email" autoComplete="email" value={email} error={error} onChange={setEmail} />
+      <button type="submit" disabled={pending} className={`${btnPrimary} min-h-12 w-full disabled:opacity-70`}>
+        {pending ? "Sending…" : "Send reset link"}
+      </button>
+      <Link href="/account" className="justify-self-center py-2 text-[14px] font-semibold text-primary underline-offset-4 hover:underline">
+        Back to sign in
+      </Link>
+    </form>
+  );
+}
+
+export function ResetPasswordForm({ token }: { token: string }) {
+  const base = useId();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const found: Record<string, string> = {};
+    if (password.length < 8) found.password = "Use at least 8 characters.";
+    else if (password !== confirm) found.confirm = "The passwords don't match.";
+    setErrors(found);
+    setFormError("");
+    if (found.password || found.confirm) return;
+    startTransition(async () => {
+      const result = await resetPassword({ token, password });
+      if (!result.ok) {
+        setErrors(result.fieldErrors ?? {});
+        setFormError(result.error ?? "");
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={submit} noValidate className="mt-6 grid gap-4">
+      <FormAlert message={formError} />
+      <Field id={`${base}-password`} label="New password" type="password" autoComplete="new-password" value={password} error={errors.password} onChange={setPassword} />
+      <Field id={`${base}-confirm`} label="Confirm new password" type="password" autoComplete="new-password" value={confirm} error={errors.confirm} onChange={setConfirm} />
+      <button type="submit" disabled={pending} className={`${btnPrimary} min-h-12 w-full disabled:opacity-70`}>
+        {pending ? "Saving…" : "Save new password"}
+      </button>
+    </form>
   );
 }

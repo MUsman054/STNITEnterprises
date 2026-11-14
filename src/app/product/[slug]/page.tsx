@@ -86,7 +86,8 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
 
   return (
     <div className="container-page pt-2 pb-10">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {/* Escape "<" so a value containing "</script>" can never close the tag (XSS). */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <Breadcrumbs
         crumbs={[
           ...(category ? [{ label: category.short, href: `/category/${category.slug}` }] : []),

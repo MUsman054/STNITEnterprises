@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
+import { MAX_QTY } from "@/lib/cart-limits";
 import { getProduct, type Product } from "@/lib/catalog";
 
 /**
@@ -16,7 +17,7 @@ export type CartItem = { product: Product; qty: number; lineTotal: number };
 
 type CartState = { lines: CartLine[]; saved: string[] };
 
-export const MAX_QTY = 99;
+export { MAX_QTY };
 const STORAGE_KEY = "stn-cart-v2";
 const EMPTY: CartState = { lines: [], saved: [] };
 
@@ -73,6 +74,14 @@ function sanitize(input: unknown): CartState {
 function load() {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
+  try {
+    // Older versions kept order details (name, address, email) in the browser. Orders now
+    // live on the server, so remove those copies.
+    window.localStorage.removeItem("stn-orders-v1");
+    window.sessionStorage.removeItem("stn-last-order-v1");
+  } catch {
+    // Storage unavailable.
+  }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     state = raw ? sanitize(JSON.parse(raw)) : EMPTY;
