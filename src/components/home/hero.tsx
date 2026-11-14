@@ -29,6 +29,16 @@ const slides = SLIDE_MPNS.map((mpn) => products.find((product) => product.mpn ==
 
 const INTERVAL = 6000;
 
+/** Soft background per slide (cycled). Light enough to keep dark text readable. */
+const SLIDE_BACKGROUNDS = [
+  "radial-gradient(circle at 75% 50%, #ffffff 0%, transparent 55%), linear-gradient(120deg, #e3f4dc 0%, #c9ead0 100%)", // mint
+  "radial-gradient(circle at 75% 50%, #ffffff 0%, transparent 55%), linear-gradient(120deg, #e1eefc 0%, #c7dcf7 100%)", // sky
+  "radial-gradient(circle at 75% 50%, #ffffff 0%, transparent 55%), linear-gradient(120deg, #fdebdc 0%, #f9d4b8 100%)", // peach
+  "radial-gradient(circle at 75% 50%, #ffffff 0%, transparent 55%), linear-gradient(120deg, #ece6fb 0%, #d9cdf5 100%)", // lavender
+  "radial-gradient(circle at 75% 50%, #ffffff 0%, transparent 55%), linear-gradient(120deg, #fdf5d6 0%, #f7e6a8 100%)", // butter
+  "radial-gradient(circle at 75% 50%, #ffffff 0%, transparent 55%), linear-gradient(120deg, #fce4ea 0%, #f6c9d5 100%)", // rose
+];
+
 /**
  * Auto-advancing product banner: a compact white card, text on the left and a large
  * product photo on the right. Keeps running under the mouse; pauses only with the pause
@@ -189,6 +199,7 @@ function Slide({ product, position, total, active }: { product: Product; positio
       aria-label={`${position + 1} of ${total}`}
       aria-hidden={!active}
       inert={!active}
+      style={{ background: SLIDE_BACKGROUNDS[position % SLIDE_BACKGROUNDS.length] }}
       className={`[grid-area:1/1] grid transition-[opacity,visibility] duration-500 ease-out md:min-h-[440px] md:grid-cols-2 ${
         active ? "visible opacity-100" : "invisible opacity-0"
       }`}
@@ -228,7 +239,7 @@ function Slide({ product, position, total, active }: { product: Product; positio
             {category && (
               <Link
                 href={`/category/${category.slug}`}
-                className="inline-flex min-h-11 items-center rounded-full border border-foreground/20 px-5 text-[15px] font-semibold text-foreground transition-colors duration-200 hover:border-foreground/50"
+                className="inline-flex min-h-11 items-center rounded-full border border-foreground/20 bg-white/60 px-5 text-[15px] font-semibold text-foreground transition-colors duration-200 hover:border-foreground/50"
               >
                 Shop {category.short}
               </Link>
@@ -246,7 +257,7 @@ function Slide({ product, position, total, active }: { product: Product; positio
           priority={position === 0}
           sizes="(min-width: 768px) 50vw, 100vw"
           // Manufacturer photos carry wide white margins, so they are scaled up on desktop.
-          className={`object-contain p-4 transition-[translate,scale] duration-700 ease-[var(--ease-out-soft)] md:p-6 ${
+          className={`object-contain p-4 mix-blend-multiply transition-[translate,scale] duration-700 ease-[var(--ease-out-soft)] md:p-6 ${
             active ? "translate-x-0 scale-100 md:scale-[1.3]" : "translate-x-6 scale-95 md:scale-[1.2]"
           }`}
         />
