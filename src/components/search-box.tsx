@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useMemo, useState } from "react";
-import { Award, LayoutGrid, Search, TrendingUp } from "lucide-react";
+import { useId, useMemo, useRef, useState } from "react";
+import { Award, Check, ChevronDown, LayoutGrid, Search, TrendingUp } from "lucide-react";
 import { brandName, categories, childName, getProduct, searchBrands, searchCategories, searchProducts } from "@/lib/catalog";
 import { formatPrice } from "@/lib/site";
 import { ProductImage } from "@/components/product-image";
@@ -38,6 +38,130 @@ function Highlight({ text, query }: { text: string; query: string }) {
         ),
       )}
     </>
+  );
+}
+
+const departmentOptions = [{ slug: "", short: "All categories" }, ...categories.map((c) => ({ slug: c.slug, short: c.short }))];
+
+/**
+ * Category picker styled like the header menu dropdowns (Brands, Support).
+ * Opens on click or ArrowDown; arrows move, Enter/Space picks, Escape closes.
+ */
+function DepartmentSelect({ id, value, onChange }: { id: string; value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const selectedIndex = Math.max(0, departmentOptions.findIndex((o) => o.slug === value));
+  const label = departmentOptions[selectedIndex].short;
+
+  function openAt(index: number) {
+    setOpen(true);
+    requestAnimationFrame(() => optionRefs.current[index]?.focus());
+  }
+
+  function close(returnFocus = false) {
+    setOpen(false);
+    if (returnFocus) buttonRef.current?.focus();
+  }
+
+  function pick(slug: string) {
+    onChange(slug);
+    close(true);
+  }
+
+  function handleOptionKey(event: React.KeyboardEvent, index: number) {
+    const last = departmentOptions.length - 1;
+    const move = (to: number) => {
+      event.preventDefault();
+      optionRefs.current[to]?.focus();
+    };
+    if (event.key === "ArrowDown") move(index === last ? 0 : index + 1);
+    else if (event.key === "ArrowUp") move(index === 0 ? last : index - 1);
+    else if (event.key === "Home") move(0);
+    else if (event.key === "End") move(last);
+    else if (event.key === "Tab") close();
+  }
+
+  return (
+    <div
+      className="relative hidden shrink-0 lg:flex"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) close();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          event.preventDefault();
+          event.stopPropagation();
+          close(true);
+        }
+      }}
+    >
+      <input type="hidden" name="cat" value={value} />
+      <button
+        ref={buttonRef}
+        id={id}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-label={`Search in category: ${label}`}
+        onClick={() => (open ? close() : openAt(selectedIndex))}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            openAt(selectedIndex);
+          }
+        }}
+        className={`flex h-full max-w-[170px] items-center gap-1.5 rounded-l-full border-r border-border pr-3 pl-5 text-[13px] font-medium text-foreground transition-colors duration-150 hover:bg-primary-soft focus-visible:bg-primary-soft focus-visible:outline-none ${
+          open ? "bg-primary-soft" : "bg-surface"
+        }`}
+      >
+        <span className="truncate">{label}</span>
+        <ChevronDown
+          aria-hidden="true"
+          className={`size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      <div
+        className={`absolute top-full left-0 z-50 pt-2 transition-[opacity,translate,visibility] duration-150 ease-out ${
+          open ? "visible translate-y-0 opacity-100" : "invisible translate-y-1 opacity-0"
+        }`}
+      >
+        <ul
+          id={listId}
+          role="listbox"
+          aria-label="Search in category"
+          className="max-h-[min(70vh,480px)] w-64 overflow-y-auto rounded-2xl border border-border bg-background p-2 text-foreground shadow-pop"
+        >
+          {departmentOptions.map((option, index) => {
+            const selected = option.slug === value;
+            return (
+              <li key={option.slug || "all"} role="presentation">
+                <button
+                  ref={(el) => {
+                    optionRefs.current[index] = el;
+                  }}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  tabIndex={open ? 0 : -1}
+                  onClick={() => pick(option.slug)}
+                  onKeyDown={(event) => handleOptionKey(event, index)}
+                  className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-[15px] transition-colors duration-150 hover:bg-primary-soft hover:text-primary focus-visible:bg-primary-soft focus-visible:text-primary focus-visible:outline-none ${
+                    selected ? "font-semibold text-primary" : "text-foreground"
+                  }`}
+                >
+                  <span className="truncate">{option.short}</span>
+                  {selected && <Check aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.5} />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
   );
 }
 
@@ -140,29 +264,9 @@ export function SearchBox({ id, showDepartments = true }: { id: string; showDepa
           event.preventDefault();
           go(q ? searchHref(q) : dept ? `/category/${dept}` : "/shop");
         }}
-        className="flex h-12 w-full overflow-hidden rounded-full bg-background ring-2 ring-transparent transition-shadow duration-200 focus-within:ring-brand"
+        className="flex h-12 w-full rounded-full bg-background ring-2 ring-transparent transition-shadow duration-200 focus-within:ring-brand"
       >
-        {showDepartments && (
-          <>
-            <label htmlFor={`${id}-dept`} className="sr-only">
-              Search in category
-            </label>
-            <select
-              id={`${id}-dept`}
-              name="dept"
-              value={dept}
-              onChange={(event) => setDept(event.target.value)}
-              className="hidden max-w-[150px] shrink-0 border-r border-border bg-surface pr-2 pl-4 text-[13px] font-medium text-foreground transition-colors duration-200 hover:bg-primary-soft focus-visible:outline-none lg:block"
-            >
-              <option value="">All categories</option>
-              {categories.map((category) => (
-                <option key={category.slug} value={category.slug}>
-                  {category.short}
-                </option>
-              ))}
-            </select>
-          </>
-        )}
+        {showDepartments && <DepartmentSelect id={`${id}-dept`} value={dept} onChange={setDept} />}
         <label htmlFor={id} className="sr-only">
           Search products
         </label>
