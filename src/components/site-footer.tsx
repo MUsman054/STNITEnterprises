@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronUp, Mail, MapPin, Phone, ShieldCheck } from "lucide-react";
+import { ChevronUp, Mail, MapPin, Phone, ShieldCheck, Warehouse } from "lucide-react";
 import { legalNav, mapDirectionsUrl, site, supportNav } from "@/lib/site";
 import { LogoLockup } from "@/components/logo";
 import { hasSocialLinks, SocialLinks } from "@/components/social-icons";
@@ -98,6 +98,20 @@ export function SiteFooter() {
                   <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-lime" />
                   <span>
                     {site.contact.addressLines.map((line) => (
+                      <span key={line} className="block">
+                        {line}
+                      </span>
+                    ))}
+                    <span className="sr-only"> (opens directions in a new tab)</span>
+                  </span>
+                </a>
+              </li>
+              <li>
+                <a href={mapDirectionsUrl(site.warehouse.mapQuery)} target="_blank" rel="noopener noreferrer" className={`${linkClass} items-start gap-3 py-2.5`}>
+                  <Warehouse aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-lime" />
+                  <span>
+                    <span className="block font-semibold">Warehouse</span>
+                    {site.warehouse.addressLines.map((line) => (
                       <span key={line} className="block">
                         {line}
                       </span>

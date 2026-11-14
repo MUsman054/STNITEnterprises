@@ -19,6 +19,10 @@ export const site = {
     addressLines: ["7901 4th St N # 17149", "St. Petersburg, FL 33702"],
     mapQuery: "7901 4th St N, St. Petersburg, FL 33702",
   },
+  warehouse: {
+    addressLines: ["17440 West Little York Rd, STE A", "Houston, TX 77084"],
+    mapQuery: "17440 West Little York Rd, Houston, TX 77084",
+  },
   shipping: {
     label: "Standard shipping",
     cost: 0,
@@ -67,10 +71,10 @@ export function formatPrice(amount: number): string {
   return priceFormatter.format(amount);
 }
 
-export function mapEmbedUrl(): string {
-  return `https://www.google.com/maps?q=${encodeURIComponent(site.contact.mapQuery)}&z=14&output=embed`;
+export function mapEmbedUrl(query: string = site.contact.mapQuery): string {
+  return `https://www.google.com/maps?q=${encodeURIComponent(query)}&z=14&output=embed`;
 }
 
-export function mapDirectionsUrl(): string {
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(site.contact.mapQuery)}`;
+export function mapDirectionsUrl(query: string = site.contact.mapQuery): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
 }

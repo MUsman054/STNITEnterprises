@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ArrowUpRight, ChevronDown, Headset, Mail, MapPin, Phone } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Headset, Mail, MapPin, Phone, Warehouse } from "lucide-react";
 import { ContactForm } from "@/components/contact-form";
 import { faqs } from "@/content/support";
 import { PageBanner } from "@/components/page-banner";
@@ -8,8 +8,14 @@ import { eyebrowClass } from "@/lib/ui";
 
 export const metadata: Metadata = {
   title: "Contact Us",
-  description: "Phone, email, address and directions for STN IT Enterprise in St. Petersburg, Florida.",
+  description:
+    "Phone, email, addresses and directions for STN IT Enterprise: office in St. Petersburg, Florida and warehouse in Houston, Texas.",
 };
+
+const locations = [
+  { label: "Office", icon: MapPin, ...site.contact },
+  { label: "Warehouse", icon: Warehouse, ...site.warehouse },
+];
 
 /* FAQs are shared with the Support > FAQs page (src/content/support.ts). */
 
@@ -87,12 +93,38 @@ export default function ContactPage() {
                     <MapPin aria-hidden="true" className="size-5" />
                   </span>
                   <span>
-                    <span className="block text-sm text-muted-foreground">Address</span>
+                    <span className="block text-sm text-muted-foreground">Office address</span>
                     <span className="block text-lg font-semibold text-foreground">
                       {site.contact.addressLines[0]}
                     </span>
                     <span className="block text-lg font-semibold text-foreground">
                       {site.contact.addressLines[1]}
+                    </span>
+                    <span className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                      Get directions
+                      <ArrowUpRight aria-hidden="true" className="size-4" />
+                      <span className="sr-only">(opens in a new tab)</span>
+                    </span>
+                  </span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href={mapDirectionsUrl(site.warehouse.mapQuery)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cardClass}
+                >
+                  <span className={iconWell}>
+                    <Warehouse aria-hidden="true" className="size-5" />
+                  </span>
+                  <span>
+                    <span className="block text-sm text-muted-foreground">Warehouse</span>
+                    <span className="block text-lg font-semibold text-foreground">
+                      {site.warehouse.addressLines[0]}
+                    </span>
+                    <span className="block text-lg font-semibold text-foreground">
+                      {site.warehouse.addressLines[1]}
                     </span>
                     <span className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-primary">
                       Get directions
@@ -120,24 +152,34 @@ export default function ContactPage() {
 
         {/* Map */}
         <section aria-labelledby="location-title" className="reveal mt-14 lg:mt-20">
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className={eyebrowClass}>Find us</p>
-              <h2 id="location-title" className="mt-2 text-[28px] leading-tight font-bold text-foreground sm:text-4xl">
-                Our location
-              </h2>
-            </div>
-            <p className="text-muted-foreground">{site.contact.addressLines.join(", ")}</p>
+          <div className="mb-6">
+            <p className={eyebrowClass}>Find us</p>
+            <h2 id="location-title" className="mt-2 text-[28px] leading-tight font-bold text-foreground sm:text-4xl">
+              Our locations
+            </h2>
           </div>
-          <div className="overflow-hidden rounded-3xl border border-border bg-surface">
-            <iframe
-              title={`Map showing ${site.name} at ${site.contact.addressLines.join(", ")}`}
-              src={mapEmbedUrl()}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              allowFullScreen
-              className="block h-[380px] w-full border-0 lg:h-[460px]"
-            />
+          <div className="grid gap-6 lg:grid-cols-2">
+            {locations.map((location) => (
+              <figure key={location.label} className="min-w-0">
+                <div className="overflow-hidden rounded-3xl border border-border bg-surface">
+                  <iframe
+                    title={`Map showing ${site.name} ${location.label.toLowerCase()} at ${location.addressLines.join(", ")}`}
+                    src={mapEmbedUrl(location.mapQuery)}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    allowFullScreen
+                    className="block h-[320px] w-full border-0 lg:h-[400px]"
+                  />
+                </div>
+                <figcaption className="mt-3 flex items-start gap-2 text-muted-foreground">
+                  <location.icon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+                  <span>
+                    <span className="font-semibold text-foreground">{location.label}:</span>{" "}
+                    {location.addressLines.join(", ")}
+                  </span>
+                </figcaption>
+              </figure>
+            ))}
           </div>
         </section>
 
