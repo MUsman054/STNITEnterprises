@@ -3,10 +3,11 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Heart, LogOut, Package, Shield, ShoppingCart } from "lucide-react";
 import { logout } from "@/actions/auth";
-import { AuthView } from "@/components/account-views";
+import { AuthView } from "@/components/auth-view";
 import { Breadcrumbs } from "@/components/page-banner";
 import { btnOutline, cardClass } from "@/lib/ui";
 import { getCurrentUser, safeNextPath } from "@/server/auth";
+import { config } from "@/server/env";
 
 export const metadata: Metadata = { title: "My Account", robots: { index: false } };
 
@@ -15,7 +16,7 @@ export default function AccountPage({ searchParams }: PageProps<"/account">) {
     <div className="bg-canvas">
       <div className="container-page pt-2 pb-10">
         <Breadcrumbs crumbs={[{ label: "My Account" }]} />
-        <Suspense fallback={<div aria-busy="true" className="mx-auto mt-2 h-96 max-w-4xl animate-pulse rounded-2xl bg-background" />}>
+        <Suspense fallback={<div aria-busy="true" className="mx-auto mt-2 h-96 max-w-5xl animate-pulse rounded-2xl bg-background" />}>
           <Account searchParams={searchParams} />
         </Suspense>
       </div>
@@ -25,7 +26,17 @@ export default function AccountPage({ searchParams }: PageProps<"/account">) {
 
 async function Account({ searchParams }: { searchParams: PageProps<"/account">["searchParams"] }) {
   const [user, params] = await Promise.all([getCurrentUser(), searchParams]);
-  if (!user) return <AuthView next={safeNextPath(params.next)} />;
+  if (!user) {
+    const error = typeof params.error === "string" ? params.error : undefined;
+    return (
+      <AuthView
+        next={safeNextPath(params.next)}
+        initialMode={params.mode === "signup" ? "signup" : "login"}
+        googleEnabled={config.googleEnabled()}
+        oauthError={error}
+      />
+    );
+  }
 
   const links = [
     { href: "/account/orders", label: "Order History", icon: Package },

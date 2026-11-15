@@ -41,7 +41,11 @@ export async function signup(input: unknown, next?: string): Promise<ActionResul
   return result;
 }
 
-const INVALID_LOGIN = "That email and password don't match. Check them and try again.";
+// Sign-up already tells people when an email is taken, so hiding it here would only confuse
+// customers without protecting anyone. Rate limits below still stop password guessing.
+const NO_ACCOUNT = "We couldn't find an account with this email. Check the spelling or create a new account.";
+const WRONG_PASSWORD = "Incorrect password. Try again, or use “Forgot your password?” to reset it.";
+const GOOGLE_ONLY = "This account was created with Google. Use “Continue with Google” to sign in, or reset your password to add one.";
 
 export async function login(input: unknown, next?: string): Promise<ActionResult> {
   const result = await safeAction("login", async () => {
@@ -60,9 +64,10 @@ export async function login(input: unknown, next?: string): Promise<ActionResult
 
     if (!user) {
       await fakePasswordCheck(parsed.data.password);
-      return { ok: false, error: INVALID_LOGIN };
+      return { ok: false, fieldErrors: { email: NO_ACCOUNT } };
     }
-    if (!(await verifyPassword(parsed.data.password, user.passwordHash))) return { ok: false, error: INVALID_LOGIN };
+    if (!user.passwordHash) return { ok: false, error: GOOGLE_ONLY };
+    if (!(await verifyPassword(parsed.data.password, user.passwordHash))) return { ok: false, fieldErrors: { password: WRONG_PASSWORD } };
 
     await createSession(user.id);
     return { ok: true };

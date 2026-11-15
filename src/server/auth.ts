@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { and, eq, gt, lt } from "drizzle-orm";
 import { db, schema } from "@/server/db";
-import { isProduction } from "@/server/env";
+import { config, isProduction } from "@/server/env";
 import { hashToken, randomToken } from "@/server/security";
 
 /**
@@ -100,7 +100,8 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     }
   }
 
-  return { id: row.id, email: row.email, name: row.name, company: row.company, role: row.role };
+  const role = row.role === "admin" || config.adminEmails().has(row.email) ? "admin" : "customer";
+  return { id: row.id, email: row.email, name: row.name, company: row.company, role };
 }
 
 export async function requireUser(next = "/account"): Promise<CurrentUser> {

@@ -26,7 +26,10 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   company: text("company"),
-  passwordHash: text("password_hash").notNull(),
+  /** Null for accounts that only sign in with Google. */
+  passwordHash: text("password_hash"),
+  /** Google account id ("sub" claim), set when the user signs in with Google. */
+  googleId: text("google_id").unique(),
   role: userRole("role").notNull().default("customer"),
   ...timestamps,
 });

@@ -159,8 +159,14 @@ export function SiteHeader() {
                 {(close) => (
                   <div className="w-64 p-2">
                     <Link href="/account" onClick={close} className="flex min-h-11 items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-white hover:bg-primary-hover">
-                      Login / Signup
+                      Sign in
                     </Link>
+                    <p className="mt-2 text-center text-[13px] text-muted-foreground">
+                      New customer?{" "}
+                      <Link href="/account?mode=signup" onClick={close} className="font-semibold text-primary underline-offset-4 hover:underline">
+                        Start here
+                      </Link>
+                    </p>
                     <ul className="mt-2">
                       {accountNav.slice(1).map((item) => (
                         <li key={item.href}>

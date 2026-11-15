@@ -32,6 +32,15 @@ export const config = {
   stripeEnabled: () => Boolean(read("STRIPE_SECRET_KEY") && read("STRIPE_WEBHOOK_SECRET")),
   bankTransferInstructions: () => read("BANK_TRANSFER_INSTRUCTIONS")?.replace(/\\n/g, "\n"),
   emailEnabled: () => Boolean(read("RESEND_API_KEY") && read("EMAIL_FROM")),
+  googleEnabled: () => Boolean(read("GOOGLE_CLIENT_ID") && read("GOOGLE_CLIENT_SECRET")),
+  /** Comma-separated emails that always get admin access (no database edit needed). */
+  adminEmails: () =>
+    new Set(
+      (read("ADMIN_EMAILS") ?? "")
+        .split(",")
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean),
+    ),
   /** Where order and form notifications go. */
   notifyEmail: () => read("NOTIFY_EMAIL") ?? site.contact.salesEmail,
 };

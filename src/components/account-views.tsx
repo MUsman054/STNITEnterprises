@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useId, useState, useTransition } from "react";
-import { CircleCheck, Heart, Package, ShoppingCart } from "lucide-react";
-import { login, requestPasswordReset, resetPassword, signup } from "@/actions/auth";
+import { CircleCheck, Heart } from "lucide-react";
+import { requestPasswordReset, resetPassword } from "@/actions/auth";
 import { addToCart } from "@/lib/cart-store";
 import { brandName, getProduct, type Product } from "@/lib/catalog";
 import { removeFromWishlist, useWishlist } from "@/lib/wishlist-store";
@@ -63,127 +63,6 @@ function Field({
           {error}
         </p>
       )}
-    </div>
-  );
-}
-
-/** Login / Signup, backed by src/actions/auth.ts. `next` is where to go after signing in. */
-export function AuthView({ next }: { next?: string }) {
-  const [tab, setTab] = useState<"login" | "signup">("login");
-  const base = useId();
-  const [values, setValues] = useState({ name: "", email: "", password: "", company: "" });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [formError, setFormError] = useState("");
-  const [pending, startTransition] = useTransition();
-
-  function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (pending) return;
-    const found: Record<string, string> = {};
-    if (tab === "signup" && !values.name.trim()) found.name = "Enter your name.";
-    if (!values.email.trim()) found.email = "Enter your email address.";
-    else if (!emailPattern.test(values.email.trim())) found.email = "Enter a valid email address.";
-    if (!values.password) found.password = "Enter your password.";
-    else if (tab === "signup" && values.password.length < 8) found.password = "Use at least 8 characters.";
-    setErrors(found);
-    setFormError("");
-    const first = ["name", "email", "password"].find((key) => found[key]);
-    if (first) {
-      document.getElementById(`${base}-${first}`)?.focus();
-      return;
-    }
-    startTransition(async () => {
-      // On success the action redirects, so only failures come back here.
-      const result =
-        tab === "login"
-          ? await login({ email: values.email, password: values.password }, next)
-          : await signup(values, next);
-      if (!result.ok) {
-        setErrors(result.fieldErrors ?? {});
-        setFormError(result.error ?? "");
-        setValues((current) => ({ ...current, password: "" }));
-      }
-    });
-  }
-
-  const field = (name: keyof typeof values, label: string, type: string, autoComplete: string, optional = false) => (
-    <Field
-      id={`${base}-${name}`}
-      label={label}
-      type={type}
-      autoComplete={autoComplete}
-      optional={optional}
-      value={values[name]}
-      error={errors[name]}
-      onChange={(value) => {
-        setValues((current) => ({ ...current, [name]: value }));
-        if (errors[name]) setErrors((current) => ({ ...current, [name]: "" }));
-      }}
-    />
-  );
-
-  return (
-    <div className="mx-auto mt-2 grid max-w-4xl gap-5 md:grid-cols-[1fr_300px]">
-      <section className={`${cardClass} sm:p-8`} aria-labelledby={`${base}-title`}>
-        <h1 id={`${base}-title`} className="text-[26px] font-bold text-foreground">
-          {tab === "login" ? "Sign in to your account" : "Create your account"}
-        </h1>
-        <div role="tablist" aria-label="Account" className="mt-5 grid grid-cols-2 rounded-full bg-surface p-1">
-          {(["login", "signup"] as const).map((key) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={tab === key}
-              onClick={() => {
-                setTab(key);
-                setErrors({});
-                setFormError("");
-              }}
-              className={`min-h-11 rounded-full text-[15px] font-semibold transition-colors duration-200 ${tab === key ? "bg-background text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              {key === "login" ? "Login" : "Sign up"}
-            </button>
-          ))}
-        </div>
-
-        <form onSubmit={submit} noValidate className="mt-6 grid gap-4">
-          <FormAlert message={formError} />
-          {tab === "signup" && field("name", "Full name", "text", "name")}
-          {tab === "signup" && field("company", "Company", "text", "organization", true)}
-          {field("email", "Email address", "email", "email")}
-          {field("password", "Password", "password", tab === "login" ? "current-password" : "new-password")}
-          {tab === "login" && (
-            <Link href="/account/forgot-password" className="-mt-1 justify-self-start py-1 text-[14px] font-semibold text-primary underline-offset-4 hover:underline">
-              Forgot your password?
-            </Link>
-          )}
-          <button type="submit" disabled={pending} className={`${btnPrimary} min-h-12 w-full disabled:opacity-70`}>
-            {pending ? "Please wait…" : tab === "login" ? "Sign in" : "Create account"}
-          </button>
-          <p className="text-center text-[13px] text-muted-foreground">You can also check out as a guest without an account.</p>
-        </form>
-      </section>
-
-      <aside className={`${cardClass} self-start`} aria-label="Account shortcuts">
-        <h2 className="text-lg font-bold text-foreground">Your shortcuts</h2>
-        <ul className="mt-3 space-y-1">
-          {[
-            { href: "/account/orders", label: "Order History", icon: Package },
-            { href: "/wishlist", label: "Wishlist", icon: Heart },
-            { href: "/cart", label: "Cart", icon: ShoppingCart },
-          ].map(({ href, label, icon: Icon }) => (
-            <li key={href}>
-              <Link href={href} className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-foreground transition-colors duration-150 hover:bg-surface">
-                <span className="grid size-9 place-items-center rounded-full bg-primary-soft text-primary">
-                  <Icon aria-hidden="true" className="size-4" />
-                </span>
-                {label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </aside>
     </div>
   );
 }
