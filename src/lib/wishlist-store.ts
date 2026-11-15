@@ -1,28 +1,33 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { getProduct } from "@/lib/catalog";
+import { sanitizeWishlist } from "@/lib/shopping-lists";
 
-/** Wishlist: product slugs saved in localStorage, synced across tabs. */
+/**
+ * Wishlist: product slugs saved in localStorage, synced across tabs. For signed-in
+ * shoppers, AccountSync mirrors it to their account via onWishlistMutation/replaceWishlist.
+ */
 
 const STORAGE_KEY = "stn-wishlist-v1";
 const EMPTY: string[] = [];
 let list: string[] = EMPTY;
 let loaded = false;
 const listeners = new Set<() => void>();
+const mutationListeners = new Set<() => void>();
 
 function load() {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
   try {
-    const raw = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]");
-    list = Array.isArray(raw) ? raw.filter((slug): slug is string => typeof slug === "string" && Boolean(getProduct(slug))) : EMPTY;
+    const clean = sanitizeWishlist(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]"));
+    list = clean.length ? clean : EMPTY;
   } catch {
     list = EMPTY;
   }
 }
 
-function commit(next: string[]) {
+/** fromAccount: data coming from the server, which must not be echoed back to it. */
+function commit(next: string[], fromAccount = false) {
   list = next.length ? next : EMPTY;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
@@ -30,6 +35,7 @@ function commit(next: string[]) {
     // Storage unavailable: the wishlist still works for this page view.
   }
   listeners.forEach((listener) => listener());
+  if (!fromAccount) mutationListeners.forEach((listener) => listener());
 }
 
 function subscribe(listener: () => void) {
@@ -63,4 +69,22 @@ export function removeFromWishlist(slug: string) {
 
 export function useWishlist(): string[] {
   return useSyncExternalStore(subscribe, get, () => EMPTY);
+}
+
+// ---------- account sync hooks ----------
+
+export function getWishlistSnapshot(): string[] {
+  return get();
+}
+
+export function replaceWishlist(next: unknown) {
+  load();
+  commit(sanitizeWishlist(next), true);
+}
+
+export function onWishlistMutation(listener: () => void) {
+  mutationListeners.add(listener);
+  return () => {
+    mutationListeners.delete(listener);
+  };
 }

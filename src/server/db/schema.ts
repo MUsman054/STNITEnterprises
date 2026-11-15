@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { index, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import type { CartLine } from "@/lib/shopping-lists";
 
 /**
  * Database schema. Money is stored in integer cents to avoid floating-point errors.
@@ -32,6 +33,21 @@ export const users = pgTable("users", {
   googleId: text("google_id").unique(),
   role: userRole("role").notNull().default("customer"),
   ...timestamps,
+});
+
+/**
+ * A signed-in shopper's cart, saved-for-later items and wishlist (one row per account), so
+ * they follow the account across devices and disappear from the browser on sign-out.
+ * Product slugs only: prices always come from the catalogue at checkout.
+ */
+export const shoppingLists = pgTable("shopping_lists", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  cart: jsonb("cart").$type<CartLine[]>().notNull().default(sql`'[]'::jsonb`),
+  saved: jsonb("saved").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  wishlist: jsonb("wishlist").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const sessions = pgTable(

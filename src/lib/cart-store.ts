@@ -3,23 +3,23 @@
 import { useMemo, useSyncExternalStore } from "react";
 import { MAX_QTY } from "@/lib/cart-limits";
 import { getProduct, type Product } from "@/lib/catalog";
+import { EMPTY_CART, sanitizeCart, type CartLine, type CartState } from "@/lib/shopping-lists";
 
 /**
  * Cart state: items in the cart plus items saved for later.
  *
  * Lives outside React in a small store and is saved to localStorage, so it survives page
- * reloads and stays in sync across browser tabs. There is no backend yet: when a commerce
- * API is added, replace load/commit here and the UI keeps working.
+ * reloads and stays in sync across browser tabs. For signed-in shoppers, AccountSync
+ * (src/components/account-sync.tsx) mirrors it to their account via onCartMutation/replaceCart.
  */
 
-export type CartLine = { slug: string; qty: number };
+export type { CartLine };
 export type CartItem = { product: Product; qty: number; lineTotal: number };
 
-type CartState = { lines: CartLine[]; saved: string[] };
 
 export { MAX_QTY };
 const STORAGE_KEY = "stn-cart-v2";
-const EMPTY: CartState = { lines: [], saved: [] };
+const EMPTY: CartState = EMPTY_CART;
 
 // ---------- tiny store helper ----------
 
@@ -48,28 +48,7 @@ let state: CartState = EMPTY;
 let loaded = false;
 const listeners = new Set<() => void>();
 
-function sanitize(input: unknown): CartState {
-  const raw = (input ?? {}) as { lines?: unknown; saved?: unknown };
-  const lines: CartLine[] = [];
-  if (Array.isArray(raw.lines)) {
-    for (const entry of raw.lines) {
-      const slug = typeof entry?.slug === "string" ? entry.slug : "";
-      const qty = Math.floor(Number(entry?.qty));
-      if (!getProduct(slug) || !Number.isFinite(qty) || qty < 1) continue;
-      if (lines.some((line) => line.slug === slug)) continue;
-      lines.push({ slug, qty: Math.min(qty, MAX_QTY) });
-    }
-  }
-  const saved: string[] = [];
-  if (Array.isArray(raw.saved)) {
-    for (const slug of raw.saved) {
-      if (typeof slug !== "string" || !getProduct(slug)) continue;
-      if (saved.includes(slug) || lines.some((line) => line.slug === slug)) continue;
-      saved.push(slug);
-    }
-  }
-  return lines.length || saved.length ? { lines, saved } : EMPTY;
-}
+const sanitize = sanitizeCart;
 
 function load() {
   if (loaded || typeof window === "undefined") return;
@@ -90,7 +69,10 @@ function load() {
   }
 }
 
-function commit(next: CartState) {
+const mutationListeners = new Set<() => void>();
+
+/** fromAccount: data coming from the server, which must not be echoed back to it. */
+function commit(next: CartState, fromAccount = false) {
   state = next.lines.length || next.saved.length ? next : EMPTY;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -99,6 +81,7 @@ function commit(next: CartState) {
     // for this page view; it just won't persist.
   }
   listeners.forEach((listener) => listener());
+  if (!fromAccount) mutationListeners.forEach((listener) => listener());
 }
 
 function subscribe(listener: () => void) {
@@ -119,6 +102,26 @@ function subscribe(listener: () => void) {
 function getState() {
   load();
   return state;
+}
+
+// ---------- account sync hooks ----------
+
+export function getCartSnapshot(): CartState {
+  return getState();
+}
+
+/** Replaces the cart with the account's copy (sign-in, another device) without re-saving it. */
+export function replaceCart(next: unknown) {
+  load();
+  commit(sanitize(next), true);
+}
+
+/** Called after every change the shopper makes in this tab. */
+export function onCartMutation(listener: () => void) {
+  mutationListeners.add(listener);
+  return () => {
+    mutationListeners.delete(listener);
+  };
 }
 
 // ---------- UI state: drawer, toast, screen-reader announcements ----------

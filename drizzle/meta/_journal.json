@@ -15,6 +15,13 @@
       "when": 1794737022607,
       "tag": "0001_google_login",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794740438768,
+      "tag": "0002_shopping_lists",
+      "breakpoints": true
     }
   ]
 }

@@ -109,12 +109,12 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 }
 
 /** What the site header needs to show the signed-in state. Never throws (the header must always render). */
-export type HeaderUser = { name: string; email: string; isAdmin: boolean } | null;
+export type HeaderUser = { id: string; name: string; email: string; isAdmin: boolean } | null;
 
 export async function getHeaderUser(): Promise<HeaderUser> {
   try {
     const user = await getCurrentUser();
-    return user ? { name: user.name, email: user.email, isAdmin: user.role === "admin" } : null;
+    return user ? { id: user.id, name: user.name, email: user.email, isAdmin: user.role === "admin" } : null;
   } catch (error) {
     // Let Next.js prerender/dynamic signals through; only swallow real failures (e.g. DB down).
     unstable_rethrow(error);

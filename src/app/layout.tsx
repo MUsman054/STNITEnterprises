@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Poppins } from "next/font/google";
+import { Suspense } from "react";
+import { AccountSync } from "@/components/account-sync";
 import { CartDrawer } from "@/components/cart-drawer";
 import { CartToast } from "@/components/cart-toast";
 import { LiveChat } from "@/components/live-chat";
@@ -42,6 +44,8 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  // Not awaited: the header and AccountSync each read it inside their own <Suspense>.
+  const userPromise = getHeaderUser();
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
@@ -51,12 +55,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to main content
         </a>
-        {/* Not awaited: the header streams the signed-in state inside its own <Suspense>. */}
-        <SiteHeader userPromise={getHeaderUser()} />
+        <SiteHeader userPromise={userPromise} />
         <main id="main" className="flex-1">
           {children}
         </main>
         <SiteFooter />
+        <Suspense fallback={null}>
+          <AccountSync userPromise={userPromise} />
+        </Suspense>
         <CartDrawer />
         <CartToast />
         <LiveChat />
