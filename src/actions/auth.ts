@@ -1,5 +1,6 @@
 "use server";
 
+import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { createSession, destroyAllSessions, destroySession, safeNextPath } from "@/server/auth";
@@ -37,7 +38,11 @@ export async function signup(input: unknown, next?: string): Promise<ActionResul
     }
     return { ok: true };
   });
-  if (result.ok) redirect(safeNextPath(next));
+  if (result.ok) {
+    // Re-render the header (and everything else) for the new signed-in state.
+    refresh();
+    redirect(safeNextPath(next));
+  }
   return result;
 }
 
@@ -72,12 +77,17 @@ export async function login(input: unknown, next?: string): Promise<ActionResult
     await createSession(user.id);
     return { ok: true };
   });
-  if (result.ok) redirect(safeNextPath(next));
+  if (result.ok) {
+    // Re-render the header (and everything else) for the new signed-in state.
+    refresh();
+    redirect(safeNextPath(next));
+  }
   return result;
 }
 
 export async function logout(): Promise<void> {
   await destroySession();
+  refresh();
   redirect("/account");
 }
 
@@ -140,6 +150,10 @@ export async function resetPassword(input: unknown): Promise<ActionResult> {
     await createSession(claimed.userId);
     return { ok: true };
   });
-  if (result.ok) redirect("/account");
+  if (result.ok) {
+    // Re-render the header (and everything else) for the new signed-in state.
+    refresh();
+    redirect("/account");
+  }
   return result;
 }

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useId, useState } from "react";
-import { ChevronDown, CircleUserRound, Heart, Menu, Phone, ShoppingCart } from "lucide-react";
+import { Suspense, use, useId, useState } from "react";
+import { ChevronDown, CircleUserRound, Heart, LogOut, Menu, Package, Phone, Shield, ShoppingCart } from "lucide-react";
+import { logout } from "@/actions/auth";
 import { openCartDrawer, useCart } from "@/lib/cart-store";
 import { brands, categories } from "@/lib/catalog";
 import { accountNav, formatPrice, site, supportNav } from "@/lib/site";
@@ -12,6 +13,7 @@ import { AllMenu } from "@/components/all-menu";
 import { LogoLockup } from "@/components/logo";
 import { ProductImage } from "@/components/product-image";
 import { SearchBox } from "@/components/search-box";
+import type { HeaderUser } from "@/server/auth";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -107,7 +109,126 @@ function MenuDropdown({
 const panelLink =
   "flex min-h-11 items-center rounded-lg px-3 text-[15px] text-foreground transition-colors duration-150 hover:bg-primary-soft hover:text-primary";
 
-export function SiteHeader() {
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] ?? "?").slice(0, 2);
+  return letters.toUpperCase();
+}
+
+function Avatar({ name, size = "md" }: { name: string; size?: "md" | "lg" }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`grid shrink-0 place-items-center rounded-full bg-lime font-bold text-ink ${size === "lg" ? "size-11 text-[15px]" : "size-8 text-[13px]"}`}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+function AccountFromPromise({ userPromise, iconButton }: { userPromise: Promise<HeaderUser>; iconButton: string }) {
+  return <AccountControls user={use(userPromise)} iconButton={iconButton} />;
+}
+
+/** Desktop "Account & Orders" dropdown plus the mobile account icon, for either signed-in state. */
+function AccountControls({ user, iconButton }: { user: HeaderUser; iconButton: string }) {
+  const firstName = user?.name.split(" ")[0] ?? "";
+  const signedInLinks = [
+    { href: "/account", label: "My Account", icon: CircleUserRound },
+    { href: "/account/orders", label: "Order History", icon: Package },
+    { href: "/wishlist", label: "Wishlist", icon: Heart },
+    ...(user?.isAdmin ? [{ href: "/admin", label: "Store admin", icon: Shield }] : []),
+  ];
+
+  return (
+    <>
+      <ul className="hidden lg:block">
+        <MenuDropdown
+          label="Account"
+          href="/account"
+          align="right"
+          ariaLabel={user ? `Account and orders, signed in as ${user.name}` : "Account and orders"}
+          content={
+            user ? (
+              <span className="flex items-center gap-2.5 text-left leading-tight">
+                <Avatar name={user.name} />
+                <span>
+                  <span className="block max-w-32 truncate text-[12px] font-normal text-nav-muted">Hello, {firstName}</span>
+                  <span className="block text-[14px] font-semibold">Account &amp; Orders</span>
+                </span>
+              </span>
+            ) : (
+              <span className="text-left leading-tight">
+                <span className="block text-[12px] font-normal text-nav-muted">Hello, sign in</span>
+                <span className="block text-[14px] font-semibold">Account &amp; Orders</span>
+              </span>
+            )
+          }
+        >
+          {(close) =>
+            user ? (
+              <div className="w-72 p-2">
+                <div className="flex items-center gap-3 rounded-xl bg-surface p-3">
+                  <Avatar name={user.name} size="lg" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[15px] font-semibold text-foreground">{user.name}</span>
+                    <span className="block truncate text-[13px] text-muted-foreground">{user.email}</span>
+                  </span>
+                </div>
+                <ul className="mt-2">
+                  {signedInLinks.map(({ href, label, icon: Icon }) => (
+                    <li key={href}>
+                      <Link href={href} onClick={close} className={`${panelLink} gap-3`}>
+                        <Icon aria-hidden="true" className="size-4 text-muted-foreground" />
+                        {label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <form action={logout} className="mt-1 border-t border-border pt-1">
+                  <button type="submit" className={`${panelLink} w-full gap-3 text-left`}>
+                    <LogOut aria-hidden="true" className="size-4 text-muted-foreground" />
+                    Sign out
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div className="w-64 p-2">
+                <Link href="/account" onClick={close} className="flex min-h-11 items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-white hover:bg-primary-hover">
+                  Sign in
+                </Link>
+                <p className="mt-2 text-center text-[13px] text-muted-foreground">
+                  New customer?{" "}
+                  <Link href="/account?mode=signup" onClick={close} className="font-semibold text-primary underline-offset-4 hover:underline">
+                    Start here
+                  </Link>
+                </p>
+                <ul className="mt-2">
+                  {accountNav.slice(1).map((item) => (
+                    <li key={item.href}>
+                      <Link href={item.href} onClick={close} className={panelLink}>
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          }
+        </MenuDropdown>
+      </ul>
+      <Link
+        href="/account"
+        className={`${iconButton} leading-tight lg:hidden`}
+        aria-label={user ? `My account, signed in as ${user.name}` : "My account, sign in"}
+      >
+        {user ? <Avatar name={user.name} /> : <CircleUserRound aria-hidden="true" className="size-6" />}
+      </Link>
+    </>
+  );
+}
+
+export function SiteHeader({ userPromise }: { userPromise: Promise<HeaderUser> }) {
   const pathname = usePathname();
   const { count, subtotal, hydrated } = useCart();
   const wishlist = useWishlist();
@@ -142,47 +263,10 @@ export function SiteHeader() {
           </div>
 
           <div className="ml-auto flex items-center md:ml-0">
-            {/* Account menu */}
-            <ul className="hidden lg:block">
-              <MenuDropdown
-                label="Account"
-                href="/account"
-                align="right"
-                ariaLabel="Account and orders"
-                content={
-                  <span className="text-left leading-tight">
-                    <span className="block text-[12px] font-normal text-nav-muted">Hello, sign in</span>
-                    <span className="block text-[14px] font-semibold">Account &amp; Orders</span>
-                  </span>
-                }
-              >
-                {(close) => (
-                  <div className="w-64 p-2">
-                    <Link href="/account" onClick={close} className="flex min-h-11 items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-white hover:bg-primary-hover">
-                      Sign in
-                    </Link>
-                    <p className="mt-2 text-center text-[13px] text-muted-foreground">
-                      New customer?{" "}
-                      <Link href="/account?mode=signup" onClick={close} className="font-semibold text-primary underline-offset-4 hover:underline">
-                        Start here
-                      </Link>
-                    </p>
-                    <ul className="mt-2">
-                      {accountNav.slice(1).map((item) => (
-                        <li key={item.href}>
-                          <Link href={item.href} onClick={close} className={panelLink}>
-                            {item.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </MenuDropdown>
-            </ul>
-            <Link href="/account" className={`${iconButton} leading-tight lg:hidden`} aria-label="My account">
-              <CircleUserRound aria-hidden="true" className="size-6" />
-            </Link>
+            {/* Account menu: the static shell shows the signed-out state, then the real one streams in. */}
+            <Suspense fallback={<AccountControls user={null} iconButton={iconButton} />}>
+              <AccountFromPromise userPromise={userPromise} iconButton={iconButton} />
+            </Suspense>
 
             <Link
               href="/wishlist"

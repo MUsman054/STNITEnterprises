@@ -6,6 +6,7 @@ import { LiveChat } from "@/components/live-chat";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { site } from "@/lib/site";
+import { getHeaderUser } from "@/server/auth";
 import "./globals.css";
 
 const inter = Inter({
@@ -50,7 +51,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to main content
         </a>
-        <SiteHeader />
+        {/* Not awaited: the header streams the signed-in state inside its own <Suspense>. */}
+        <SiteHeader userPromise={getHeaderUser()} />
         <main id="main" className="flex-1">
           {children}
         </main>

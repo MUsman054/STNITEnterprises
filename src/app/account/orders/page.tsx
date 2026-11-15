@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Info, Package } from "lucide-react";
+import { Info, LockKeyhole, Package } from "lucide-react";
 import { Breadcrumbs } from "@/components/page-banner";
 import { orderStatusLabel, paymentMethods } from "@/lib/order";
 import { formatPrice } from "@/lib/site";
-import { btnPrimary, cardClass } from "@/lib/ui";
-import { requireUser } from "@/server/auth";
+import { btnOutline, btnPrimary, cardClass } from "@/lib/ui";
+import { getCurrentUser } from "@/server/auth";
 import { getOrdersForUser } from "@/server/orders";
 
 export const metadata: Metadata = { title: "Order History", robots: { index: false } };
@@ -30,7 +30,8 @@ export default function OrdersPage() {
 }
 
 async function Orders() {
-  const user = await requireUser("/account/orders");
+  const user = await getCurrentUser();
+  if (!user) return <SignInPrompt />;
   const orders = await getOrdersForUser(user.id);
 
   if (orders.length === 0) {
@@ -98,5 +99,34 @@ async function Orders() {
         ))}
       </ul>
     </>
+  );
+}
+
+const next = encodeURIComponent("/account/orders");
+
+/** Shown instead of redirecting, so visitors can see what the page is for. */
+function SignInPrompt() {
+  return (
+    <div className="py-12 text-center">
+      <span className="mx-auto grid size-16 place-items-center rounded-full bg-primary-soft text-primary">
+        <LockKeyhole aria-hidden="true" className="size-7" />
+      </span>
+      <p className="mt-4 text-xl font-bold text-foreground">Sign in to see your orders</p>
+      <p className="mx-auto mt-1 max-w-md text-muted-foreground">
+        Your order history, order status and tracking numbers appear here once you&apos;re signed in.
+      </p>
+      <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <Link href={`/account?next=${next}`} className={`${btnPrimary} w-full sm:w-auto sm:min-w-40`}>
+          Sign in
+        </Link>
+        <Link href={`/account?mode=signup&next=${next}`} className={`${btnOutline} w-full sm:w-auto sm:min-w-40`}>
+          Create an account
+        </Link>
+      </div>
+      <p className="mx-auto mt-6 flex max-w-md items-start justify-center gap-2 text-[14px] text-muted-foreground">
+        <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+        Checked out as a guest? Use the link in your order confirmation email to view that order.
+      </p>
+    </div>
   );
 }

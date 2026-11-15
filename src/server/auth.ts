@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { notFound, redirect, unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { and, eq, gt, lt } from "drizzle-orm";
 import { db, schema } from "@/server/db";
@@ -102,6 +102,21 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const role = row.role === "admin" || config.adminEmails().has(row.email) ? "admin" : "customer";
   return { id: row.id, email: row.email, name: row.name, company: row.company, role };
+}
+
+/** What the site header needs to show the signed-in state. Never throws (the header must always render). */
+export type HeaderUser = { name: string; email: string; isAdmin: boolean } | null;
+
+export async function getHeaderUser(): Promise<HeaderUser> {
+  try {
+    const user = await getCurrentUser();
+    return user ? { name: user.name, email: user.email, isAdmin: user.role === "admin" } : null;
+  } catch (error) {
+    // Let Next.js prerender/dynamic signals through; only swallow real failures (e.g. DB down).
+    unstable_rethrow(error);
+    console.error("[header] could not read session:", error);
+    return null;
+  }
 }
 
 export async function requireUser(next = "/account"): Promise<CurrentUser> {

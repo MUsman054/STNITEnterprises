@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useId, useState, useTransition } from "react";
-import { Check, CircleAlert, Eye, EyeOff, FileText, LockKeyhole, Package, Truck } from "lucide-react";
+import { Check, CircleAlert, Eye, EyeOff, FileText, Package, Truck } from "lucide-react";
 import { login, signup } from "@/actions/auth";
 import { LogoLockup } from "@/components/logo";
 import { btnPrimary, inputClass, labelClass } from "@/lib/ui";
@@ -240,10 +240,6 @@ export function AuthView({
             ))}
           </ul>
         </div>
-        <p className="relative mt-10 flex items-center gap-2 text-[13px] text-nav-muted">
-          <LockKeyhole aria-hidden="true" className="size-4 text-lime" />
-          Your password is encrypted and never stored in plain text.
-        </p>
       </aside>
 
       {/* Form */}
