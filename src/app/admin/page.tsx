@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { desc, eq } from "drizzle-orm";
 import { orderStatusLabel, type OrderStatus } from "@/lib/order";
 import { formatPrice } from "@/lib/site";
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import { db, schema } from "@/server/db";
 import { AdminLoading, AdminShell, tableWrap, td, th } from "./admin-ui";
 
@@ -23,7 +23,7 @@ export default function AdminOrdersPage({ searchParams }: PageProps<"/admin">) {
 }
 
 async function OrdersTable({ searchParams }: { searchParams: PageProps<"/admin">["searchParams"] }) {
-  await requireAdmin();
+  await requirePermission("orders:view");
   const { status } = await searchParams;
   const filter = statuses.find((s) => s === status);
 

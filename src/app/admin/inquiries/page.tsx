@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { desc } from "drizzle-orm";
 import { formatPrice } from "@/lib/site";
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import { db, schema } from "@/server/db";
 import { AdminLoading, AdminShell, tableWrap, td, th } from "../admin-ui";
 import { InquiryStatusButton } from "./status-button";
@@ -22,7 +22,7 @@ export default function AdminInquiriesPage() {
 }
 
 async function InquiriesTable() {
-  await requireAdmin();
+  await requirePermission("inquiries", "/admin/inquiries");
   const rows = await db().select().from(schema.inquiries).orderBy(desc(schema.inquiries.createdAt)).limit(300);
 
   return (

@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { MAX_QTY } from "@/lib/cart-limits";
+import { invitableRoles } from "@/lib/roles";
 import { usStates } from "@/lib/order";
 
 /**
@@ -120,6 +121,24 @@ export const resetRequestSchema = z.object({ email });
 
 export const resetSchema = z.object({
   token: z.string().min(20).max(100),
+  password,
+});
+
+// ---------- store admin team ----------
+
+export const inviteSchema = z.object({ email, role: z.enum(invitableRoles, "Choose a role.") });
+
+export const idSchema = z.object({ id: z.uuid() });
+
+export const changeRoleSchema = z.object({ userId: z.uuid(), role: z.enum(invitableRoles) });
+
+const inviteToken = z.string().min(20).max(100);
+
+export const acceptInviteSchema = z.object({ token: inviteToken });
+
+export const acceptInviteSignupSchema = z.object({
+  token: inviteToken,
+  name: requiredText(120, "Enter your name."),
   password,
 });
 

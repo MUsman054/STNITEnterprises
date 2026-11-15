@@ -38,9 +38,34 @@ Card payments locally: install the [Stripe CLI](https://docs.stripe.com/stripe-c
 4. **Bank transfer (optional):** set `BANK_TRANSFER_INSTRUCTIONS`, or leave it empty to hide the option.
 5. Set `APP_URL` to the live address (e.g. `https://stnitenterprise.com`) and **redeploy** —
    the checkout page reads which payment methods are configured at build time.
-6. **Admin:** sign up on the site, then run `npm run make-admin -- you@example.com`
-   (with the production `DATABASE_URL`). The admin area is at `/admin`.
+6. **Store owner:** the owner signs up on the site. Then either run
+   `npm run make-admin -- owner@example.com` with the production `DATABASE_URL`, or (when the
+   database URL is a Secret on Vercel and can't be read) set `BOOTSTRAP_OWNER_EMAIL` on Vercel
+   and redeploy: that account becomes owner only if the store has no owner yet. Remove the
+   variable afterwards. The admin area is at `/admin`; the owner adds everyone else from
+   **Admin → Team** (see below).
+
+On Vercel the project's build command is `npm run db:migrate && npm run build`, so database
+migrations are applied on every deploy before the new code goes live. `vercel deploy` reads
+`.vercelignore` (not `.gitignore`), which keeps `.data/` and `.env*` from being uploaded.
 7. Replace the dummy catalogue in `src/lib/catalog.ts` with real products and prices.
+
+## Store admin team
+
+Staff are invited by email from `/admin/team`. The invitee opens the link (valid once, for
+72 hours), creates an account or signs in with the invited email, and joins with the role.
+If email isn't set up, the Team page shows the link to send by hand.
+
+| Role | Orders | Inquiries | Subscribers | Team |
+|------|--------|-----------|-------------|------|
+| Owner | view and update | ✓ | ✓ | invite, re-role and remove admins and sales |
+| Admin | view and update | ✓ | ✓ | invite, re-role and remove sales |
+| Sales | view only | ✓ | – | – |
+
+Nobody can change their own access, and owners can't be changed from the website (only with
+`npm run make-admin -- email [--admin | --sales | --remove]`), so the store can't be locked
+out. Removed staff keep their customer account; admin access ends on their next request.
+Accounts listed in `ADMIN_EMAILS` (Google sign-in only) are owners.
 
 On self-hosted servers with more than one instance, also set a shared
 `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` (Vercel handles this automatically).
@@ -53,7 +78,7 @@ On self-hosted servers with more than one instance, also set a shared
 | Card payments | Stripe Checkout | Card details never touch this site. Orders become "Paid" only via the signed webhook |
 | Contact, quote and part requests | `inquiries` | Also emailed to `NOTIFY_EMAIL` |
 | Newsletter | `newsletter_subscribers` | |
-| Customer accounts | `users`, `sessions`, `password_reset_tokens` | scrypt password hashes; session and reset tokens stored only as SHA-256 hashes |
+| Customer accounts | `users`, `sessions`, `password_reset_tokens`, `staff_invites` | scrypt password hashes; session and reset tokens stored only as SHA-256 hashes |
 | Abuse protection | `rate_limits` | Per-IP / per-email limits on forms, login, signup, reset, checkout |
 | Cart and wishlist | Browser localStorage | Product slugs and quantities only, no personal data |
 
@@ -84,5 +109,5 @@ X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) in `next.config.t
 | `src/lib/cart-store.ts` | Cart logic (saved in localStorage) |
 | `src/lib/site.ts` | Store name, contact details, social links, menus |
 | `src/content/support.ts` | FAQs, return, shipping, warranty, terms and privacy text |
-| `scripts/make-admin.mjs` | Gives an account admin access |
+| `scripts/make-admin.mjs` | Makes an account the store owner (or admin/sales) |
 | `.env.example` | Every setting the server needs |

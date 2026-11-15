@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import { db, schema } from "@/server/db";
 import { safeAction, type ActionResult } from "@/server/action-utils";
 import { adminStatusTransitions, updateOrderStatus } from "@/server/orders";
@@ -19,7 +19,7 @@ const orderUpdateSchema = z.object({
 
 export async function adminUpdateOrder(input: unknown): Promise<ActionResult> {
   return safeAction("admin-order", async () => {
-    const admin = await requireAdmin();
+    const admin = await requirePermission("orders:edit");
     const parsed = orderUpdateSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: "Invalid update." };
 
@@ -40,7 +40,7 @@ const inquiryUpdateSchema = z.object({ id: z.uuid(), status: z.enum(["new", "han
 
 export async function adminSetInquiryStatus(input: unknown): Promise<ActionResult> {
   return safeAction("admin-inquiry", async () => {
-    await requireAdmin();
+    await requirePermission("inquiries");
     const parsed = inquiryUpdateSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: "Invalid update." };
     await db().update(schema.inquiries).set({ status: parsed.data.status }).where(eq(schema.inquiries.id, parsed.data.id));

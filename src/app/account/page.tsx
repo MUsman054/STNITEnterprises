@@ -5,6 +5,7 @@ import { Heart, LogOut, Package, Shield, ShoppingCart } from "lucide-react";
 import { logout } from "@/actions/auth";
 import { AuthView } from "@/components/auth-view";
 import { Breadcrumbs } from "@/components/page-banner";
+import { isStaff } from "@/lib/roles";
 import { btnOutline, cardClass } from "@/lib/ui";
 import { getCurrentUser, safeNextPath } from "@/server/auth";
 import { config } from "@/server/env";
@@ -42,7 +43,7 @@ async function Account({ searchParams }: { searchParams: PageProps<"/account">["
     { href: "/account/orders", label: "Order History", icon: Package },
     { href: "/wishlist", label: "Wishlist", icon: Heart },
     { href: "/cart", label: "Cart", icon: ShoppingCart },
-    ...(user.role === "admin" ? [{ href: "/admin", label: "Store admin", icon: Shield }] : []),
+    ...(isStaff(user.role) ? [{ href: "/admin", label: "Store admin", icon: Shield }] : []),
   ];
 
   return (

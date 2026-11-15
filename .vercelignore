@@ -1,0 +1,7 @@
+# `vercel deploy` uploads the working folder and does not read .gitignore.
+# Keep local data and secrets off Vercel.
+.data/
+.env*
+!.env.example
+.next/
+node_modules/

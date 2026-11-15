@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { desc, isNull } from "drizzle-orm";
-import { requireAdmin } from "@/server/auth";
+import { requirePermission } from "@/server/auth";
 import { db, schema } from "@/server/db";
 import { AdminLoading, AdminShell, tableWrap, td, th } from "../admin-ui";
 
@@ -18,7 +18,7 @@ export default function AdminSubscribersPage() {
 }
 
 async function Subscribers() {
-  await requireAdmin();
+  await requirePermission("subscribers", "/admin/subscribers");
   const rows = await db()
     .select()
     .from(schema.newsletterSubscribers)

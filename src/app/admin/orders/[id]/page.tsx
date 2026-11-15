@@ -6,7 +6,8 @@ import { eq } from "drizzle-orm";
 import { orderStatusLabel } from "@/lib/order";
 import { formatPrice } from "@/lib/site";
 import { cardClass } from "@/lib/ui";
-import { requireAdmin } from "@/server/auth";
+import { can } from "@/lib/roles";
+import { requirePermission } from "@/server/auth";
 import { db, schema } from "@/server/db";
 import { adminStatusTransitions, getOrderItems } from "@/server/orders";
 import { AdminLoading, AdminShell } from "../../admin-ui";
@@ -30,7 +31,7 @@ export default function AdminOrderPage({ params }: PageProps<"/admin/orders/[id]
 }
 
 async function OrderDetail({ params }: { params: PageProps<"/admin/orders/[id]">["params"] }) {
-  await requireAdmin();
+  const user = await requirePermission("orders:view");
   const { id } = await params;
   if (!UUID.test(id)) notFound();
 
@@ -119,15 +120,25 @@ async function OrderDetail({ params }: { params: PageProps<"/admin/orders/[id]">
       </div>
 
       <section className={`${cardClass} lg:sticky lg:top-24`}>
-        <h2 className="text-lg font-bold">Update order</h2>
-        <p className="mt-1 text-[14px] text-muted-foreground">Setting the status to Shipped emails the customer, with tracking if given.</p>
-        <OrderStatusForm
-          orderId={order.id}
-          status={order.status}
-          carrier={order.carrier ?? ""}
-          trackingNumber={order.trackingNumber ?? ""}
-          options={adminStatusTransitions.map((s) => ({ value: s, label: orderStatusLabel[s] }))}
-        />
+        {can(user.role, "orders:edit") ? (
+          <>
+            <h2 className="text-lg font-bold">Update order</h2>
+            <p className="mt-1 text-[14px] text-muted-foreground">Setting the status to Shipped emails the customer, with tracking if given.</p>
+            <OrderStatusForm
+              orderId={order.id}
+              status={order.status}
+              carrier={order.carrier ?? ""}
+              trackingNumber={order.trackingNumber ?? ""}
+              options={adminStatusTransitions.map((s) => ({ value: s, label: orderStatusLabel[s] }))}
+            />
+          </>
+        ) : (
+          <>
+            <h2 className="text-lg font-bold">Order status</h2>
+            <p className="mt-1 text-[15px] font-semibold">{orderStatusLabel[order.status]}</p>
+            <p className="mt-1 text-[14px] text-muted-foreground">Ask an admin to change the status or add tracking.</p>
+          </>
+        )}
         <Link href="/admin" className="mt-4 inline-block py-2 text-[14px] font-semibold text-primary underline-offset-4 hover:underline">
           ← All orders
         </Link>

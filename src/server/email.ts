@@ -209,3 +209,20 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
     text: `Hi ${name},\n\nReset your password (link expires in 1 hour):\n${resetUrl}\n\nIf you didn't ask for this, ignore this email.`,
   });
 }
+
+// ---------- store admin team ----------
+
+export async function sendStaffInviteEmail(invite: { to: string; inviterName: string; roleLabel: string; acceptUrl: string; expiresHours: number }): Promise<boolean> {
+  const { to, inviterName, roleLabel, acceptUrl, expiresHours } = invite;
+  return sendEmail({
+    to,
+    subject: `${inviterName} invited you to the ${site.name} store admin`,
+    html: layout(
+      "You're invited to the store admin",
+      p(`${e(inviterName)} invited you to join the ${e(site.name)} team as <strong>${e(roleLabel)}</strong>.`) +
+        p(`<a href="${e(acceptUrl)}" style="display:inline-block;background:#121417;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none">Accept invitation</a>`) +
+        p(`This link works once and expires in ${expiresHours} hours. If you weren't expecting this, you can ignore this email.`),
+    ),
+    text: `${inviterName} invited you to join the ${site.name} team as ${roleLabel}.\n\nAccept the invitation (link expires in ${expiresHours} hours):\n${acceptUrl}\n\nIf you weren't expecting this, ignore this email.`,
+  });
+}

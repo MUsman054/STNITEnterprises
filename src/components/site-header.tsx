@@ -137,7 +137,7 @@ function AccountControls({ user, iconButton }: { user: HeaderUser; iconButton: s
     { href: "/account", label: "My Account", icon: CircleUserRound },
     { href: "/account/orders", label: "Order History", icon: Package },
     { href: "/wishlist", label: "Wishlist", icon: Heart },
-    ...(user?.isAdmin ? [{ href: "/admin", label: "Store admin", icon: Shield }] : []),
+    ...(user?.isStaff ? [{ href: "/admin", label: "Store admin", icon: Shield }] : []),
   ];
 
   return (

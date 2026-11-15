@@ -19,7 +19,14 @@ const timestamps = {
 
 // ---------- accounts ----------
 
-export const userRole = pgEnum("user_role", ["customer", "admin"]);
+/**
+ * customer: shopper. Staff roles, from least to most access:
+ * - sales: views orders and inquiries, marks inquiries handled.
+ * - admin: everything in the store admin, and can invite/remove sales staff.
+ * - owner: everything, including adding and removing admins. Owners can only be changed
+ *   with `npm run make-admin`, never from the website, so the business can't be locked out.
+ */
+export const userRole = pgEnum("user_role", ["customer", "admin", "sales", "owner"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -77,6 +84,24 @@ export const passwordResetTokens = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("password_reset_user_idx").on(table.userId)],
+);
+
+/** Invitations to join the store admin team. Accepting one grants `role` to that email's account. */
+export const staffInvites = pgTable(
+  "staff_invites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Always stored lower-cased and trimmed. */
+    email: text("email").notNull(),
+    role: userRole("role").notNull(),
+    /** SHA-256 of the emailed token. */
+    tokenHash: text("token_hash").notNull().unique(),
+    invitedBy: uuid("invited_by").references(() => users.id, { onDelete: "set null" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("staff_invites_email_idx").on(table.email)],
 );
 
 // ---------- orders ----------
@@ -193,6 +218,8 @@ export const rateLimits = pgTable("rate_limits", {
 });
 
 export type User = typeof users.$inferSelect;
+export type UserRole = (typeof userRole.enumValues)[number];
+export type StaffInvite = typeof staffInvites.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type OrderStatus = (typeof orderStatus.enumValues)[number];

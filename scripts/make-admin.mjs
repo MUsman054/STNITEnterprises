@@ -1,6 +1,10 @@
-// Gives an existing account admin access to /admin.
-// Usage: npm run make-admin -- someone@example.com
-// The person must sign up on the website first. Run with --remove to take admin away.
+// Gives an existing account access to the store admin (/admin).
+// Usage: npm run make-admin -- someone@example.com            -> owner (full access, manages the team)
+//        npm run make-admin -- someone@example.com --admin    -> admin
+//        npm run make-admin -- someone@example.com --sales    -> sales
+//        npm run make-admin -- someone@example.com --remove   -> back to a regular customer
+// The person must sign up on the website first. Owners can then invite everyone else from
+// /admin/team, so this script is only needed for the first owner (or to change an owner).
 // With a local PGlite database (DATABASE_URL=pglite:...), stop `npm run dev` first.
 import { config } from "dotenv";
 import postgres from "postgres";
@@ -9,11 +13,12 @@ config({ path: [".env.local", ".env"], quiet: true });
 
 const args = process.argv.slice(2);
 const remove = args.includes("--remove");
+const role = remove ? "customer" : args.includes("--sales") ? "sales" : args.includes("--admin") ? "admin" : "owner";
 const email = args.find((arg) => !arg.startsWith("--"))?.trim().toLowerCase();
 const url = process.env.DATABASE_URL;
 
 if (!email) {
-  console.error("Usage: npm run make-admin -- someone@example.com [--remove]");
+  console.error("Usage: npm run make-admin -- someone@example.com [--admin | --sales | --remove]");
   process.exit(1);
 }
 if (!url) {
@@ -34,7 +39,6 @@ async function connect() {
 
 const db = await connect();
 try {
-  const role = remove ? "customer" : "admin";
   const rows = await db.query("update users set role = $1::user_role, updated_at = now() where email = $2 returning email", [role, email]);
   if (rows.length === 0) {
     console.error(`No account found for ${email}. Sign up on the website first.`);
@@ -42,7 +46,7 @@ try {
   } else {
     // Sign the user out everywhere so the new role applies with a fresh session.
     await db.query("delete from sessions where user_id = (select id from users where email = $1)", [email]);
-    console.log(`${email} is now ${remove ? "a regular customer" : "an admin"}. Sign in again to use /admin.`);
+    console.log(`${email} is now ${remove ? "a regular customer" : `${role === "admin" ? "an" : "a"} ${role}`}. Sign in again to use /admin.`);
   }
 } finally {
   await db.close();

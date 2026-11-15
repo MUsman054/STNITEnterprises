@@ -4,6 +4,7 @@ import { notFound, redirect, unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { and, eq, gt, lt } from "drizzle-orm";
 import { db, schema } from "@/server/db";
+import { can, isStaff, type Permission, type Role } from "@/lib/roles";
 import { config, isProduction } from "@/server/env";
 import { hashToken, randomToken } from "@/server/security";
 
@@ -25,7 +26,7 @@ export type CurrentUser = {
   email: string;
   name: string;
   company: string | null;
-  role: "customer" | "admin";
+  role: Role;
 };
 
 async function setSessionCookie(token: string, expires: Date) {
@@ -103,18 +104,19 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   // ADMIN_EMAILS only counts once Google has verified the address: email sign-up doesn't
   // verify ownership, so otherwise anyone could register that email first and become admin.
-  const envAdmin = row.googleId !== null && config.adminEmails().has(row.email);
-  const role = row.role === "admin" || envAdmin ? "admin" : "customer";
+  // Whoever controls the hosting settings controls the store, so these accounts are owners.
+  const envOwner = row.googleId !== null && config.adminEmails().has(row.email);
+  const role: Role = envOwner ? "owner" : row.role;
   return { id: row.id, email: row.email, name: row.name, company: row.company, role };
 }
 
 /** What the site header needs to show the signed-in state. Never throws (the header must always render). */
-export type HeaderUser = { id: string; name: string; email: string; isAdmin: boolean } | null;
+export type HeaderUser = { id: string; name: string; email: string; isStaff: boolean } | null;
 
 export async function getHeaderUser(): Promise<HeaderUser> {
   try {
     const user = await getCurrentUser();
-    return user ? { id: user.id, name: user.name, email: user.email, isAdmin: user.role === "admin" } : null;
+    return user ? { id: user.id, name: user.name, email: user.email, isStaff: isStaff(user.role) } : null;
   } catch (error) {
     // Let Next.js prerender/dynamic signals through; only swallow real failures (e.g. DB down).
     unstable_rethrow(error);
@@ -129,11 +131,22 @@ export async function requireUser(next = "/account"): Promise<CurrentUser> {
   return user;
 }
 
-/** For admin pages and actions. Non-admins get a 404, so the admin area isn't advertised. */
-export async function requireAdmin(): Promise<CurrentUser> {
+/**
+ * For admin pages and actions. Signed-out visitors go to the sign-in page; anyone without the
+ * permission gets a 404, so the admin area (and what each role can reach) isn't advertised.
+ */
+export async function requirePermission(permission: Permission, next = "/admin"): Promise<CurrentUser> {
+  const user = await getCurrentUser();
+  if (!user) redirect(`/account?next=${encodeURIComponent(next)}`);
+  if (!can(user.role, permission)) notFound();
+  return user;
+}
+
+/** Any team member (sales, admin or owner). */
+export async function requireStaff(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/account?next=/admin");
-  if (user.role !== "admin") notFound();
+  if (!isStaff(user.role)) notFound();
   return user;
 }
 
