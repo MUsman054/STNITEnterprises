@@ -1,9 +1,9 @@
 import { timingSafeEqual } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
-import { createSession, safeNextPath } from "@/server/auth";
+import { createSession, destroyAllSessions, safeNextPath } from "@/server/auth";
 import { db, schema } from "@/server/db";
 import { finishGoogleFlow, GOOGLE_FLOW_COOKIE, type GoogleFlow } from "@/server/google";
 import { clientIp, rateLimit, RateLimitError } from "@/server/security";
@@ -29,13 +29,20 @@ async function upsertGoogleUser(profile: { sub: string; email: string; name: str
   const [byGoogle] = await db().select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.googleId, profile.sub)).limit(1);
   if (byGoogle) return byGoogle.id;
 
-  // Same (Google-verified) email as an existing password account: link the two.
+  // Same email as an existing password account. Email sign-up doesn't verify addresses, so
+  // that account may have been created by someone else ("pre-hijacking"). Google has now
+  // proven who owns the email: link it, drop the unverified password and end every other
+  // session, so whoever set that password loses access. The owner can add a password again
+  // with "Forgot password".
   const [byEmail] = await db()
     .update(schema.users)
-    .set({ googleId: profile.sub })
-    .where(eq(schema.users.email, profile.email))
+    .set({ googleId: profile.sub, passwordHash: null })
+    .where(and(eq(schema.users.email, profile.email), isNull(schema.users.googleId)))
     .returning({ id: schema.users.id });
-  if (byEmail) return byEmail.id;
+  if (byEmail) {
+    await destroyAllSessions(byEmail.id);
+    return byEmail.id;
+  }
 
   const [created] = await db()
     .insert(schema.users)

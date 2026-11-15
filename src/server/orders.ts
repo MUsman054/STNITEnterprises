@@ -1,5 +1,6 @@
 import "server-only";
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { MAX_QTY } from "@/lib/cart-limits";
 import { getProduct } from "@/lib/catalog";
 import { site } from "@/lib/site";
 import { db, schema } from "@/server/db";
@@ -32,6 +33,7 @@ export function priceCart(lines: { slug: string; qty: number }[]) {
   for (const [slug, quantity] of merged) {
     const product = getProduct(slug);
     if (!product) throw new CheckoutError("One of the items in your cart is no longer available. Please review your cart.");
+    if (quantity > MAX_QTY) throw new CheckoutError(`You can order up to ${MAX_QTY} of ${product.name} at once. For larger quantities, request a quote.`);
     if (product.stock === "out") throw new CheckoutError(`${product.name} is out of stock. Remove it from your cart or request a quote.`);
     const unitPriceCents = Math.round(product.price * 100);
     if (!Number.isInteger(unitPriceCents) || unitPriceCents <= 0) throw new CheckoutError("A product in your cart has no valid price.");

@@ -79,6 +79,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       name: schema.users.name,
       company: schema.users.company,
       role: schema.users.role,
+      googleId: schema.users.googleId,
       expiresAt: schema.sessions.expiresAt,
     })
     .from(schema.sessions)
@@ -100,7 +101,10 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     }
   }
 
-  const role = row.role === "admin" || config.adminEmails().has(row.email) ? "admin" : "customer";
+  // ADMIN_EMAILS only counts once Google has verified the address: email sign-up doesn't
+  // verify ownership, so otherwise anyone could register that email first and become admin.
+  const envAdmin = row.googleId !== null && config.adminEmails().has(row.email);
+  const role = row.role === "admin" || envAdmin ? "admin" : "customer";
   return { id: row.id, email: row.email, name: row.name, company: row.company, role };
 }
 
