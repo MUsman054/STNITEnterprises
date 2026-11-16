@@ -183,16 +183,18 @@ export default async function SupportPage({ params }: PageProps<"/support/[slug]
   const sideNav = [...supportNav, ...legalNav];
   const current = `/support/${slug}`;
   const CurrentIcon = navIcons[current] ?? FileText;
-  const eyebrow = legalNav.some((item) => item.href === current) ? "Legal" : "Customer support";
+  const legal = legalNav.some((item) => item.href === current);
+  const eyebrow = legal ? "Legal" : "Customer support";
   const sections = toSections(page.blocks);
   const toc = sections.filter((section) => section.heading);
 
   return (
     <>
-      {/* Header: what this page is, then every support topic one tap away. */}
+      {/* Header: what this page is. */}
       <header className="border-b border-border bg-surface">
         <div className="container-page pt-2 pb-6 lg:pb-10">
-          <Breadcrumbs crumbs={[{ label: "Support", href: "/support/faqs" }, { label: page.title }]} />
+          {/* Legal pages are not support topics, so their trail is just Home > page. */}
+          <Breadcrumbs crumbs={legal ? [{ label: page.title }] : [{ label: "Support", href: "/support/faqs" }, { label: page.title }]} />
 
           <div className="animate-fade-up mt-3 flex items-start gap-4 lg:mt-5">
             <span className="hidden size-14 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary sm:flex">
@@ -204,32 +206,6 @@ export default async function SupportPage({ params }: PageProps<"/support/[slug]
               {page.intro && <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground lg:text-[17px]">{page.intro}</p>}
             </div>
           </div>
-
-          {/* Phones and tablets: all topics as a compact grid. Desktop uses the side list. */}
-          <nav aria-label="Support topics" className="mt-6 lg:hidden">
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {sideNav.map((item) => {
-                const active = item.href === current;
-                const Icon = navIcons[item.href] ?? FileText;
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      aria-current={active ? "page" : undefined}
-                      className={`flex h-full min-h-12 items-center gap-2.5 rounded-xl border px-3 py-2 text-sm leading-tight font-semibold transition-colors duration-200 ${
-                        active
-                          ? "border-nav bg-nav text-white"
-                          : "border-border bg-background text-foreground active:border-primary active:bg-primary-soft"
-                      }`}
-                    >
-                      <Icon aria-hidden="true" className={`size-[18px] shrink-0 ${active ? "text-lime" : "text-primary"}`} />
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
         </div>
       </header>
 

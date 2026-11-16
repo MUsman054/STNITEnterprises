@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ChevronRight, CircleUserRound, Heart, LayoutGrid, Phone, Tag, X } from "lucide-react";
 import { brands, categories } from "@/lib/catalog";
-import { site, supportNav } from "@/lib/site";
+import { legalNav, site, supportNav } from "@/lib/site";
 import { LogoLockup } from "@/components/logo";
 import { ProductImage } from "@/components/product-image";
 
@@ -144,6 +144,13 @@ export function AllMenu({ open, onClose }: { open: boolean; onClose: () => void 
                 </Link>
               </li>
               <li>{subButton("support", "Support")}</li>
+              {legalNav.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} onClick={handleClose} className={row}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
 
             <div className="mt-auto border-t border-border p-4">
