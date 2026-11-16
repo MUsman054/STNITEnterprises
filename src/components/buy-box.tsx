@@ -6,7 +6,6 @@ import { useState } from "react";
 import { Heart, ShoppingCart } from "lucide-react";
 import { addToCart, useCart } from "@/lib/cart-store";
 import type { Product } from "@/lib/catalog";
-import { site } from "@/lib/site";
 import { toggleWishlist, useWishlist } from "@/lib/wishlist-store";
 import { btnOutline, btnPrimary } from "@/lib/ui";
 import { PriceStack } from "@/components/price";
@@ -33,9 +32,11 @@ export function BuyBox({ product }: { product: Product }) {
         <PriceStack product={product} size="xl" />
         <StockLabel product={product} className="pt-1 text-[15px]" />
       </div>
-      <p className="mt-3 text-[14px] text-muted-foreground">
-        {out ? "Request a quote and we’ll tell you when we can supply it." : `${site.shipping.estimate}. Free shipping in the USA.`}
-      </p>
+      {out && (
+        <p className="mt-3 text-[14px] text-muted-foreground">
+          Request a quote and we’ll tell you when we can supply it.
+        </p>
+      )}
 
       {!out && (
         <div className="mt-4 flex flex-wrap gap-2.5">
