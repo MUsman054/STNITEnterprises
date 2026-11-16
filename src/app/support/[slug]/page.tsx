@@ -29,7 +29,8 @@ export default async function SupportPage({ params }: PageProps<"/support/[slug]
 
       <div className="container-page grid gap-10 py-10 lg:grid-cols-[250px_1fr] lg:gap-14 lg:py-14">
         <nav aria-label="Support pages" className="min-w-0 lg:sticky lg:top-28 lg:self-start">
-          <ul className="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
+          {/* Phones: pills wrap so every page (and the current one) stays visible. */}
+          <ul className="flex flex-wrap gap-2 lg:flex-col lg:flex-nowrap">
             {sideNav.map((item) => {
               const active = item.href === `/support/${slug}`;
               return (
@@ -37,7 +38,7 @@ export default async function SupportPage({ params }: PageProps<"/support/[slug]
                   <Link
                     href={item.href}
                     aria-current={active ? "page" : undefined}
-                    className={`flex min-h-11 items-center rounded-full px-4 text-[15px] font-semibold whitespace-nowrap transition-colors duration-200 lg:rounded-xl ${
+                    className={`flex min-h-11 items-center rounded-full px-4 text-sm font-semibold whitespace-nowrap lg:text-[15px] transition-colors duration-200 lg:rounded-xl ${
                       active ? "bg-nav text-white" : "bg-surface text-foreground hover:bg-primary-soft hover:text-primary"
                     }`}
                   >

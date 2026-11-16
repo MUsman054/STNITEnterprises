@@ -44,22 +44,17 @@
           "STN IT Enterprise (the “Company”) is protected by US copyright law and international law and convention, including but not limited to, its activities and procedures, interface, content.",
           "Except allowed, it shall not be copied, reproduced, imitated, sold, manipulated, maliciously visited, or resold in any manner for any unlawful and unacceptable purpose.",
           "Any malicious and unauthorized use of the website shall automatically result in the revocation of the license and the privileges permitted by the company and may subject you to legal action and investigation.",
-          "You can make hyperlinks anywhere on the website limited, revocable, and inclusive, as long as the connection created restricts the display of the Website, the",
-          "The organization, its affiliates, investors, co-brand accomplices, licensors, and any other partners, its goods and services, in a manner that is deceiving, harsh, or in any way invasive or damaging.",
-          "Unless otherwise approved in writing by the Firm, its subsidiary, associate, co-brand partner, or other partner or licensor, you shall not use any licensor, associate, subsidiary, co-brand partner, partner logo, or registered graphic or trademark associated with STN IT Enterprise as part of a link to the website.",
-          "You are permitted to make hyperlinks to any page of the website limited, revocable, and inclusive, as long as the connection created restricts the display of the website, the",
-          "The organization, its associates, investors, co-brand accomplices, licensors, and any other partners, its goods and services in a manner that is deceiving, harsh, or in any way invasive or damaging.",
-          "Unless otherwise approved in writing by the Firm, its subsidiary, associate, co-brand partner, or other partner or licensor, you shall not use any licensor, associate, subsidiary, co-brand partner, partner logo, or registered graphic or trademark associated with STN IT Enterprise as part of a link to the website.",
-          "You are permitted to make hyperlinks to any page of the website limited, revocable, and inclusive, as long as the connection created restricts the display of the website, the"
+          "You are permitted to make hyperlinks to any page of the website limited, revocable, and inclusive, as long as the connection created restricts the display of the website, the organization, its associates, investors, co-brand accomplices, licensors, and any other partners, its goods and services, in a manner that is deceiving, harsh, or in any way invasive or damaging.",
+          "Unless otherwise approved in writing by the Firm, its subsidiary, associate, co-brand partner, or other partner or licensor, you shall not use any licensor, associate, subsidiary, co-brand partner, partner logo, or registered graphic or trademark associated with STN IT Enterprise as part of a link to the website."
         ]
       },
       {
-        "type": "p",
-        "text": "The organization, its associates, investors, co-brand accomplices, licensors, and any other partners, its goods and services, in a manner that is deceiving, harsh, or in any way invasive or damaging."
+        "type": "h2",
+        "text": "Privacy"
       },
       {
         "type": "p",
-        "text": "At STN IT Enterprise, accessible from https://STN IT Enterprise/, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by STN IT Enterprise and how we use it."
+        "text": "At STN IT Enterprise, accessible from https://stnitenterprise.com/, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by STN IT Enterprise and how we use it."
       },
       {
         "type": "p",
@@ -67,7 +62,7 @@
       },
       {
         "type": "p",
-        "text": "This Privacy Policy applies only to our online activities and is valid for visitors to our website with regards to the information that they shared and/or collect inSTN IT Enterprise . This policy is not applicable to any information collected offline or via channels other than this website."
+        "text": "This Privacy Policy applies only to our online activities and is valid for visitors to our website with regards to the information that they shared and/or collect in STN IT Enterprise. This policy is not applicable to any information collected offline or via channels other than this website."
       },
       {
         "type": "h2",
@@ -102,28 +97,16 @@
         "text": "We use the information we collect in various ways, including to:"
       },
       {
-        "type": "h2",
-        "text": "Provide, operate, and maintain our website"
-      },
-      {
-        "type": "h2",
-        "text": "Improve, personalise, and expand our website"
-      },
-      {
         "type": "ul",
         "items": [
+          "Provide, operate, and maintain our website",
+          "Improve, personalise, and expand our website",
           "Understand and analyse how you use our website",
           "Develop new products, services, features, and functionality",
-          "Communicate with you, either directly or through one of our partners, including for customer service, to provide you with updates and other information relating to the website, and for marketing and promotional purposes"
+          "Communicate with you, either directly or through one of our partners, including for customer service, to provide you with updates and other information relating to the website, and for marketing and promotional purposes",
+          "Send you emails",
+          "Find and prevent fraud"
         ]
-      },
-      {
-        "type": "h2",
-        "text": "Send you emails"
-      },
-      {
-        "type": "h2",
-        "text": "Find and prevent fraud"
       }
     ]
   },
@@ -260,7 +243,7 @@
       },
       {
         "type": "p",
-        "text": "for questions or requests related to this policy:"
+        "text": "For questions or requests related to this policy:"
       },
       {
         "type": "h2",
