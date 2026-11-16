@@ -2,28 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  CalendarClock,
-  ChevronDown,
   ChevronRight,
   CircleHelp,
-  Clock,
   FileText,
   Info,
-  List,
   Lock,
   Mail,
-  MapPin,
   MessageSquareText,
-  PackageCheck,
   Phone,
+  Plus,
   RotateCcw,
   ShieldCheck,
   Truck,
-  Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { PageBanner } from "@/components/page-banner";
-import { faqs, supportPages, type Block, type Highlight } from "@/content/support";
+import { Breadcrumbs } from "@/components/page-banner";
+import { faqs, supportPages, type Block } from "@/content/support";
 import { legalNav, site, supportNav } from "@/lib/site";
 
 const navIcons: Record<string, LucideIcon> = {
@@ -35,18 +29,15 @@ const navIcons: Record<string, LucideIcon> = {
   "/support/privacy-policy": Lock,
 };
 
-const highlightIcons: Record<Highlight["icon"], LucideIcon> = {
-  clock: Clock,
-  map: MapPin,
-  mail: Mail,
-  rma: PackageCheck,
-  report: CalendarClock,
-  refund: Wallet,
-};
+/**
+ * Pages that end with the "Still need help?" contact card: the ones that send the reader
+ * to us. Return and Shipping already end with their own contact section; legal pages don't need it.
+ */
+const contactCardPages = new Set(["faqs", "warranty"]);
 
-type Section = { id: string; heading?: string; blocks: Block[] };
+type Section ={ id: string; heading?: string; blocks: Block[] };
 
-/** Splits the flat block list into one section per h2, so each can be its own card. */
+/** Splits the flat block list into one section per h2. */
 function toSections(blocks: Block[]): Section[] {
   const sections: Section[] = [];
   const used = new Set<string>();
@@ -64,38 +55,98 @@ function toSections(blocks: Block[]): Section[] {
   return sections;
 }
 
+const textLink = "font-medium text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary";
+
+/** Email addresses, our phone number and web addresses inside the policy text. */
+const linkPattern = new RegExp(
+  `(${site.contact.phone.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}|[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+|https?://[^\\s),]*[^\\s),.])`,
+  "g",
+);
+
+/** Policy text with its contact details made tappable. The phone number never breaks across lines. */
+function rich(text: string) {
+  return text.split(linkPattern).map((part, i) => {
+    if (i % 2 === 0) return part;
+    if (part === site.contact.phone) {
+      return (
+        <a key={i} href={site.contact.phoneHref} className={`${textLink} whitespace-nowrap`}>
+          {part}
+        </a>
+      );
+    }
+    if (part.startsWith("http")) {
+      return (
+        <a key={i} href={part} className={`${textLink} break-words`}>
+          {part.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+        </a>
+      );
+    }
+    return (
+      <a key={i} href={`mailto:${part}`} className={`${textLink} break-words`}>
+        {part}
+      </a>
+    );
+  });
+}
+
+/** "Identifiers: Name, email…" reads as a term and its description, so the term is set in bold. */
+function listItem(text: string) {
+  const label = /^([A-Z][A-Za-z/& -]{1,28}):\s+(.+)$/.exec(text);
+  if (!label) return rich(text);
+  return (
+    <>
+      <strong className="font-semibold text-foreground">{label[1]}:</strong> {rich(label[2])}
+    </>
+  );
+}
+
 function renderBlock(block: Block, index: number) {
   switch (block.type) {
     case "h2":
       return null;
     case "h3":
       return (
-        <h3 key={index} className="mt-5 text-base font-semibold text-foreground first:mt-0 lg:text-lg">
+        <h3 key={index} className="mt-7 text-[17px] leading-snug font-semibold text-foreground first:mt-0 lg:text-lg">
           {block.text}
         </h3>
       );
     case "ul":
+      // A single point is a sentence, not a list.
+      if (block.items.length === 1) {
+        return (
+          <p key={index} className="mt-3 first:mt-0">
+            {listItem(block.items[0])}
+          </p>
+        );
+      }
       return (
-        <ul key={index} className="mt-3 list-disc space-y-2 pl-5 marker:text-brand first:mt-0">
+        <ul key={index} className="mt-3 space-y-2.5 first:mt-0">
           {block.items.map((item, i) => (
-            <li key={i}>{item}</li>
+            <li key={i} className="flex gap-3">
+              <span aria-hidden="true" className="mt-[0.7em] size-1.5 shrink-0 rounded-full bg-brand" />
+              <span className="min-w-0">{listItem(item)}</span>
+            </li>
           ))}
         </ul>
       );
     case "ol":
+      // Steps: numbered markers joined by a line, so a process reads as one sequence.
       return (
-        <ol key={index} className="mt-3 space-y-3 first:mt-0">
+        <ol key={index} className="mt-5 first:mt-0">
           {block.items.map((item, i) => (
-            <li key={i} className="flex gap-3">
+            <li key={i} className="relative flex gap-4 pb-5 last:pb-0">
+              {i < block.items.length - 1 && (
+                <span aria-hidden="true" className="absolute top-8 bottom-0 left-[13px] w-px bg-border" />
+              )}
               <span
                 aria-hidden="true"
-                className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary"
+                className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-white tabular-nums"
               >
                 {i + 1}
               </span>
-              <span className="min-w-0">
+              <span className="min-w-0 pt-0.5">
                 <span className="sr-only">Step {i + 1}: </span>
-                {item}
+                {rich(item)}
               </span>
             </li>
           ))}
@@ -104,7 +155,7 @@ function renderBlock(block: Block, index: number) {
     default:
       return (
         <p key={index} className="mt-3 first:mt-0">
-          {block.text}
+          {rich(block.text)}
         </p>
       );
   }
@@ -128,70 +179,46 @@ export default async function SupportPage({ params }: PageProps<"/support/[slug]
   const sideNav = [...supportNav, ...legalNav];
   const current = `/support/${slug}`;
   const CurrentIcon = navIcons[current] ?? FileText;
+  const eyebrow = legalNav.some((item) => item.href === current) ? "Legal" : "Customer support";
   const sections = toSections(page.blocks);
   const toc = sections.filter((section) => section.heading);
 
-  // Phones: white cards on a grey page. Desktop keeps the plain reading layout.
-  const card = "rounded-2xl border border-border bg-background shadow-card";
-
   return (
     <>
-      <PageBanner title={page.title} description={page.intro} crumbs={[{ label: "Support", href: "/support/faqs" }, { label: page.title }]} />
+      {/* Header: what this page is, then every support topic one tap away. */}
+      <header className="border-b border-border bg-surface">
+        <div className="container-page pt-2 pb-6 lg:pb-10">
+          <Breadcrumbs crumbs={[{ label: "Support", href: "/support/faqs" }, { label: page.title }]} />
 
-      <div className="bg-canvas lg:bg-background">
-        <div className="container-page grid gap-4 py-4 lg:grid-cols-[250px_1fr] lg:gap-14 lg:py-14">
-          {/* Phones and tablets: one compact "topic" menu instead of a row of tabs. */}
-          <details key={slug} className={`group/menu min-w-0 lg:hidden ${card}`}>
-            <summary className="flex min-h-14 list-none items-center gap-3 px-4 [&::-webkit-details-marker]:hidden">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
-                <CurrentIcon aria-hidden="true" className="size-[18px]" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-xs font-medium text-muted-foreground">Support topic</span>
-                <span className="block truncate text-[15px] font-semibold text-foreground">{page.title}</span>
-              </span>
-              <span className="text-[13px] font-semibold text-primary group-open/menu:hidden">Change</span>
-              <ChevronDown aria-hidden="true" className="size-5 shrink-0 text-primary transition-transform duration-300 group-open/menu:rotate-180" />
-            </summary>
-            <nav aria-label="Support topics" className="border-t border-border p-2">
-              <ul>
-                {sideNav.map((item) => {
-                  const active = item.href === current;
-                  const Icon = navIcons[item.href] ?? FileText;
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        aria-current={active ? "page" : undefined}
-                        className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-[15px] font-semibold transition-colors duration-200 ${
-                          active ? "bg-primary-soft text-primary" : "text-foreground active:bg-surface"
-                        }`}
-                      >
-                        <Icon aria-hidden="true" className={`size-5 shrink-0 ${active ? "text-primary" : "text-muted-foreground"}`} />
-                        <span className="flex-1">{item.label}</span>
-                        {!active && <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
-          </details>
+          <div className="animate-fade-up mt-3 flex items-start gap-4 lg:mt-5">
+            <span className="hidden size-14 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary sm:flex">
+              <CurrentIcon aria-hidden="true" className="size-7" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">{eyebrow}</p>
+              <h1 className="mt-1.5 text-[28px] leading-[1.15] font-bold text-foreground sm:text-[34px] lg:text-[40px]">{page.title}</h1>
+              {page.intro && <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground lg:text-[17px]">{page.intro}</p>}
+            </div>
+          </div>
 
-          {/* Desktop: sticky side list. */}
-          <nav aria-label="Support pages" className="hidden min-w-0 lg:sticky lg:top-28 lg:block lg:self-start">
-            <ul className="flex flex-col gap-2">
+          {/* Phones and tablets: all topics as a compact grid. Desktop uses the side list. */}
+          <nav aria-label="Support topics" className="mt-6 lg:hidden">
+            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {sideNav.map((item) => {
                 const active = item.href === current;
+                const Icon = navIcons[item.href] ?? FileText;
                 return (
                   <li key={item.href}>
                     <Link
                       href={item.href}
                       aria-current={active ? "page" : undefined}
-                      className={`flex min-h-11 items-center rounded-xl px-4 text-[15px] font-semibold whitespace-nowrap transition-colors duration-200 ${
-                        active ? "bg-nav text-white" : "bg-surface text-foreground hover:bg-primary-soft hover:text-primary"
+                      className={`flex h-full min-h-12 items-center gap-2.5 rounded-xl border px-3 py-2 text-sm leading-tight font-semibold transition-colors duration-200 ${
+                        active
+                          ? "border-nav bg-nav text-white"
+                          : "border-border bg-background text-foreground active:border-primary active:bg-primary-soft"
                       }`}
                     >
+                      <Icon aria-hidden="true" className={`size-[18px] shrink-0 ${active ? "text-lime" : "text-primary"}`} />
                       {item.label}
                     </Link>
                   </li>
@@ -199,132 +226,123 @@ export default async function SupportPage({ params }: PageProps<"/support/[slug]
               })}
             </ul>
           </nav>
+        </div>
+      </header>
 
-          <article className="animate-fade-up max-w-3xl min-w-0 space-y-4 lg:space-y-0">
-            {page.notice && (
-              <p className="flex items-start gap-3 rounded-2xl border border-amber-text/30 bg-amber-50 p-4 text-[15px] text-foreground lg:mb-6">
-                <Info aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-amber-text" />
-                {page.notice}
-              </p>
-            )}
+      <div className="container-page grid py-8 lg:grid-cols-[250px_1fr] lg:gap-14 lg:py-14">
+        {/* Desktop: sticky side list. */}
+        <nav aria-label="Support pages" className="hidden min-w-0 lg:sticky lg:top-28 lg:block lg:self-start">
+          <ul className="flex flex-col gap-1">
+            {sideNav.map((item) => {
+              const active = item.href === current;
+              const Icon = navIcons[item.href] ?? FileText;
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex min-h-11 items-center gap-3 rounded-xl px-4 text-[15px] font-semibold whitespace-nowrap transition-colors duration-200 ${
+                      active ? "bg-nav text-white" : "text-foreground hover:bg-primary-soft hover:text-primary"
+                    }`}
+                  >
+                    <Icon aria-hidden="true" className={`size-[18px] shrink-0 ${active ? "text-lime" : "text-muted-foreground"}`} />
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
 
-            {page.highlights && (
-              <dl className={`divide-y divide-border sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:mb-8 ${card}`}>
-                {page.highlights.map((item) => {
-                  const Icon = highlightIcons[item.icon];
-                  return (
-                    <div key={item.label} className="flex items-center gap-3 p-4 sm:flex-col sm:items-start sm:gap-2">
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
-                        <Icon aria-hidden="true" className="size-5" />
-                      </span>
-                      <div className="min-w-0">
-                        <dt className="text-[13px] text-muted-foreground">{item.label}</dt>
-                        <dd className="text-[15px] font-semibold text-foreground">{item.value}</dd>
-                      </div>
-                    </div>
-                  );
-                })}
-              </dl>
-            )}
+        <article className="animate-fade-up max-w-3xl min-w-0">
+          {page.notice && (
+            <p className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-text/25 bg-amber-50 p-4 text-[15px] leading-relaxed text-foreground">
+              <Info aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-amber-text" />
+              {page.notice}
+            </p>
+          )}
 
-            {slug === "faqs" && (
-              <div className={`divide-y divide-border overflow-hidden lg:rounded-none lg:border-x-0 lg:shadow-none ${card}`}>
-                {faqs.map((faq) => (
-                  <details key={faq.question} className="group">
-                    <summary className="flex min-h-14 list-none items-center justify-between gap-4 px-4 py-3 text-base font-semibold text-foreground transition-colors duration-200 hover:text-primary lg:min-h-16 lg:px-0 lg:text-lg [&::-webkit-details-marker]:hidden">
-                      {faq.question}
-                      <ChevronDown aria-hidden="true" className="size-5 shrink-0 text-primary transition-transform duration-300 group-open:rotate-180" />
-                    </summary>
-                    <p className="animate-fade-up px-4 pb-4 text-[15px] leading-relaxed text-muted-foreground lg:px-0 lg:pb-5 lg:text-base">
-                      {faq.answer}
-                    </p>
-                  </details>
-                ))}
-              </div>
-            )}
+          {slug === "faqs" && (
+            <div className="divide-y divide-border border-y border-border">
+              {faqs.map((faq) => (
+                <details key={faq.question} className="group">
+                  <summary className="flex min-h-16 list-none items-center justify-between gap-4 py-4 text-base leading-snug font-semibold text-foreground transition-colors duration-200 group-open:text-primary hover:text-primary lg:text-lg [&::-webkit-details-marker]:hidden">
+                    {faq.question}
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface text-foreground transition-[rotate,background-color,color] duration-300 group-open:rotate-45 group-open:bg-primary group-open:text-white">
+                      <Plus aria-hidden="true" className="size-4" />
+                    </span>
+                  </summary>
+                  <p className="animate-fade-up pr-12 pb-5 text-base leading-relaxed text-muted-foreground">{faq.answer}</p>
+                </details>
+              ))}
+            </div>
+          )}
 
-            {/* Long pages get a jump list so nobody has to scroll to find a section. */}
-            {toc.length >= 5 && (
-              <details className={`group/toc lg:mb-8 ${card}`}>
-                <summary className="flex min-h-12 list-none items-center gap-3 px-4 text-[15px] font-semibold text-foreground [&::-webkit-details-marker]:hidden">
-                  <List aria-hidden="true" className="size-5 shrink-0 text-primary" />
-                  <span className="flex-1">On this page</span>
-                  <span className="text-[13px] font-medium text-muted-foreground">{toc.length} sections</span>
-                  <ChevronDown aria-hidden="true" className="size-5 shrink-0 text-primary transition-transform duration-300 group-open/toc:rotate-180" />
-                </summary>
-                <ol className="border-t border-border p-2">
-                  {toc.map((section, i) => (
-                    <li key={section.id}>
-                      <a
-                        href={`#${section.id}`}
-                        className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[15px] text-foreground transition-colors duration-200 hover:bg-primary-soft hover:text-primary"
-                      >
-                        <span aria-hidden="true" className="w-5 shrink-0 text-[13px] font-semibold text-muted-foreground tabular-nums">
-                          {i + 1}
-                        </span>
-                        {section.heading}
-                      </a>
-                    </li>
-                  ))}
-                </ol>
-              </details>
-            )}
-
+          {/* One continuous document: sections are divided by hairlines, not boxed. */}
+          <div className="divide-y divide-border">
             {sections.map((section) => (
               <section
                 key={section.id}
                 id={section.id}
                 aria-labelledby={section.heading ? `${section.id}-title` : undefined}
-                className={`p-4 text-[15px] leading-relaxed text-foreground/85 lg:mt-9 lg:rounded-none lg:border-0 lg:p-0 lg:text-base lg:shadow-none lg:first:mt-0 ${card}`}
+                className="py-7 text-base leading-[1.7] text-pretty text-foreground/80 first:pt-0 last:pb-0 lg:py-9"
               >
                 {section.heading && (
-                  <h2 id={`${section.id}-title`} className="mb-3 text-lg font-bold text-foreground lg:text-xl">
+                  <h2 id={`${section.id}-title`} className="mb-4 text-xl leading-snug font-bold text-foreground lg:text-2xl">
+                    {toc.length > 1 && (
+                      <span aria-hidden="true" className="mb-1.5 block font-mono text-[13px] font-semibold tracking-wider text-primary">
+                        {String(toc.indexOf(section) + 1).padStart(2, "0")}
+                      </span>
+                    )}
                     {section.heading}
                   </h2>
                 )}
                 {section.blocks.map(renderBlock)}
               </section>
             ))}
+          </div>
 
-            {/* Contact: big tap targets on phones. */}
-            <aside aria-labelledby="support-help-title" className="on-dark rounded-2xl bg-nav p-5 text-white lg:mt-12 lg:p-6">
-              <h2 id="support-help-title" className="text-lg font-bold">
-                Still need help?
-              </h2>
-              <p className="mt-1 text-[15px] text-nav-muted">Our team is happy to answer questions about orders, returns and parts.</p>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <a
-                  href={site.contact.phoneHref}
-                  className="flex min-h-12 items-center gap-3 rounded-xl bg-lime px-4 font-semibold text-ink transition-opacity duration-200 hover:opacity-90"
-                >
-                  <Phone aria-hidden="true" className="size-5 shrink-0" />
-                  <span className="min-w-0">
-                    <span className="block text-xs font-medium">Call us</span>
-                    <span className="block text-[15px]">{site.contact.phone}</span>
-                  </span>
-                </a>
-                <a
-                  href={`mailto:${site.contact.salesEmail}`}
-                  className="flex min-h-12 items-center gap-3 rounded-xl bg-nav-2 px-4 py-2 font-semibold text-white ring-1 ring-white/15 transition-colors duration-200 hover:bg-white/10"
-                >
-                  <Mail aria-hidden="true" className="size-5 shrink-0 text-lime" />
-                  <span className="min-w-0">
-                    <span className="block text-xs font-medium text-nav-muted">Email us</span>
-                    <span className="block text-[15px] break-all">{site.contact.salesEmail}</span>
-                  </span>
-                </a>
-              </div>
-              <Link
-                href="/contact-us"
-                className="mt-3 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-lime underline-offset-4 hover:underline"
+          {/* Contact: big tap targets on phones. */}
+          {contactCardPages.has(slug) && (
+          <aside aria-labelledby="support-help-title" className="on-dark mt-10 rounded-2xl bg-nav p-5 text-white sm:p-7 lg:mt-12">
+            <p className="text-xs font-semibold tracking-[0.14em] text-lime uppercase">Contact</p>
+            <h2 id="support-help-title" className="mt-1.5 text-xl font-bold lg:text-2xl">
+              Still need help?
+            </h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-nav-muted">Our team is happy to answer questions about orders, returns and parts.</p>
+            <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
+              <a
+                href={site.contact.phoneHref}
+                className="flex min-h-14 items-center gap-3 rounded-xl bg-lime px-4 py-2 font-semibold text-ink transition-opacity duration-200 hover:opacity-90"
               >
-                <MessageSquareText aria-hidden="true" className="size-[18px]" />
-                Send us a message
-                <ChevronRight aria-hidden="true" className="size-4" />
-              </Link>
-            </aside>
-          </article>
-        </div>
+                <Phone aria-hidden="true" className="size-5 shrink-0" />
+                <span className="min-w-0">
+                  <span className="block text-xs font-medium">Call us</span>
+                  <span className="block text-base">{site.contact.phone}</span>
+                </span>
+              </a>
+              <a
+                href={`mailto:${site.contact.salesEmail}`}
+                className="flex min-h-14 items-center gap-3 rounded-xl bg-nav-2 px-4 py-2 font-semibold text-white ring-1 ring-white/15 transition-colors duration-200 hover:bg-white/10"
+              >
+                <Mail aria-hidden="true" className="size-5 shrink-0 text-lime" />
+                <span className="min-w-0">
+                  <span className="block text-xs font-medium text-nav-muted">Email us</span>
+                  <span className="block text-[15px] break-all">{site.contact.salesEmail}</span>
+                </span>
+              </a>
+            </div>
+            <Link
+              href="/contact-us"
+              className="mt-4 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-lime underline-offset-4 hover:underline"
+            >
+              <MessageSquareText aria-hidden="true" className="size-[18px]" />
+              Send us a message
+              <ChevronRight aria-hidden="true" className="size-4" />
+            </Link>
+          </aside>
+          )}
+        </article>
       </div>
     </>
   );
