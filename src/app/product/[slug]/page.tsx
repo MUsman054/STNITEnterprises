@@ -20,6 +20,10 @@ import {
 } from "@/lib/catalog";
 import { site } from "@/lib/site";
 
+// Every slug is prerendered by generateStaticParams; a navigation waits for that page instead of
+// showing a loading shell first (no visible fallback to design).
+export const instant = false;
+
 export function generateStaticParams() {
   return products.map((product) => ({ slug: product.slug }));
 }

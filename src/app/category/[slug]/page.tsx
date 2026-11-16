@@ -5,6 +5,10 @@ import { ProductListing } from "@/components/product-listing";
 import { categories, getCategory, lowestPrice, productsInCategory } from "@/lib/catalog";
 import { formatPrice } from "@/lib/site";
 
+// Every slug is prerendered by generateStaticParams; a navigation waits for that page instead of
+// showing a loading shell first (no visible fallback to design).
+export const instant = false;
+
 export function generateStaticParams() {
   return categories.map((category) => ({ slug: category.slug }));
 }

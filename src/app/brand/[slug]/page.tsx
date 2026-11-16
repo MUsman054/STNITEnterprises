@@ -4,6 +4,10 @@ import { ListingHeader } from "@/components/listing-header";
 import { ProductListing } from "@/components/product-listing";
 import { brands, getBrand, productsByBrand } from "@/lib/catalog";
 
+// Every slug is prerendered by generateStaticParams; a navigation waits for that page instead of
+// showing a loading shell first (no visible fallback to design).
+export const instant = false;
+
 export function generateStaticParams() {
   return brands.map((brand) => ({ slug: brand.slug }));
 }

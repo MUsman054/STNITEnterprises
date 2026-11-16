@@ -65,9 +65,11 @@ function applyFilters(list: Product[], f: Filters, byChild: boolean, skip?: keyo
   });
 }
 
-function sortProducts(list: Product[], sort: SortKey) {
+/** `pinFirst`: on single-category listings, pinned products lead the default sort. */
+function sortProducts(list: Product[], sort: SortKey, pinFirst: boolean) {
   const copy = [...list];
   const outLast = (a: Product, b: Product) => Number(a.stock === "out") - Number(b.stock === "out");
+  const pinned = (a: Product, b: Product) => (pinFirst ? Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) : 0);
   switch (sort) {
     case "best-selling":
       return copy.sort((a, b) => outLast(a, b) || b.sold - a.sold);
@@ -78,7 +80,7 @@ function sortProducts(list: Product[], sort: SortKey) {
     case "newest":
       return copy.sort((a, b) => b.added.localeCompare(a.added));
     default:
-      return copy.sort((a, b) => outLast(a, b) || Number(Boolean(b.featured)) - Number(Boolean(a.featured)) || b.sold - a.sold);
+      return copy.sort((a, b) => outLast(a, b) || pinned(a, b) || Number(Boolean(b.featured)) - Number(Boolean(a.featured)) || b.sold - a.sold);
   }
 }
 
@@ -305,7 +307,7 @@ export function ProductListing({
     if (!drawerOpen && dialog.open) dialog.close();
   }, [drawerOpen]);
 
-  const results = useMemo(() => sortProducts(applyFilters(products, filters, byChild), sort), [products, filters, sort, byChild]);
+  const results = useMemo(() => sortProducts(applyFilters(products, filters, byChild), sort, byChild), [products, filters, sort, byChild]);
   const shown = results.slice(0, visible);
 
   const groupLabel = (slug: string) => {

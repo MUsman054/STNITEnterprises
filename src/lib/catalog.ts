@@ -212,6 +212,8 @@ export type Product = {
   sold: number;
   added: string; // ISO date, for "Newest"
   featured?: boolean;
+  /** Listed first in its category and sub-category (default "Featured" sort). */
+  pinned?: boolean;
 };
 
 type Seed = {
@@ -227,6 +229,7 @@ type Seed = {
   summary: string;
   specs: [string, string][];
   featured?: boolean;
+  pinned?: boolean;
 };
 
 function slugify(text: string) {
@@ -323,6 +326,8 @@ export const products: Product[] = [
       specs: [["Type", "Processing board"], ["Condition notes", "Tested, pulled from working system"]] },
     { name: "Cisco Video Processing Daughter Board", brand: "cisco", mpn: "73-14628-02", child: "processing-boards", image: img.board, price: 399, compareAt: 449, condition: "Refurbished", summary: "Add-on daughter board for expanding an existing chassis.",
       specs: [["Type", "Daughter board"], ["Condition notes", "Tested before dispatch"]] },
+    { name: "Dell PowerEdge R7525 Dual-Socket AMD EPYC System Board", brand: "dell", mpn: "74H08", child: "server-motherboards", image: { src: "/images/products/74h08.jpg" }, price: 7020, condition: "Refurbished", pinned: true, summary: "Replacement system board for PowerEdge R7525 servers, with two SP3 sockets for AMD EPYC 7002 and 7003 processors.",
+      specs: [["Compatible with", "PowerEdge R7525"], ["Sockets", "2 × SP3"], ["Processors", "AMD EPYC 7002 / 7003, up to 64 cores each"], ["Memory slots", "32 × DDR4, up to 3200 MT/s"], ["Onboard network", "2 × 1GbE"], ["Alternate part number", "074H08"]] },
   ]),
   ...inCategory("servers-workstations", "SRV", [
     { name: "Dell PowerEdge R640 1U Rack Server", brand: "dell", mpn: "R640-CTO", child: "rack-servers", image: img.server, price: 1899, compareAt: 2149, condition: "Refurbished", summary: "Dense 1U two-socket server for virtualisation and databases, configured to order.", featured: true,
@@ -387,8 +392,10 @@ export const products: Product[] = [
       specs: [["Connectors", "USB-A to 2 × PS/2"], ["Power", "Bus powered"], ["Drivers", "Not required"]] },
     { name: "TRENDnet TU-S9 USB to Serial RS-232 Converter", brand: "trendnet", mpn: "TU-S9", child: "cables-converters", image: img.converter, price: 22, condition: "New", summary: "Add an RS-232 serial port for console access and legacy devices.",
       specs: [["Connectors", "USB-A to DB9 RS-232"], ["Power", "Bus powered"]] },
+    { name: "Dell 10GbE SFP+ to SFP+ Passive Copper Twinax Direct Attach Cable, 7m", brand: "dell", mpn: "MV799", child: "cables-converters", image: { src: "/images/products/mv799.jpg" }, price: 108, condition: "New", pinned: true, summary: "7-meter passive copper DAC for 10GbE links between switches, servers and storage: a low-power alternative to optical transceivers.",
+      specs: [["Connectors", "SFP+ to SFP+"], ["Speed", "10GbE"], ["Cable type", "Passive copper twinax (DAC)"], ["Length", "7 m (23 ft)"], ["Alternate part numbers", "0MV799, Dell kit 470-AAVI"]] },
   ]),
-];
+].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned))); // pinned first; SKUs are already assigned
 
 // ---------------------------------------------------------------------------
 // Lookups
@@ -454,7 +461,8 @@ function normalise(text: string) {
 const haystacks = new Map(
   products.map((product) => {
     const category = getCategory(product.category);
-    const text = `${product.name} ${brandName(product.brand)} ${product.mpn} ${product.sku} ${category?.name ?? ""} ${childName(product)} ${product.summary}`.toLowerCase();
+    const specValues = product.specs.map(([, value]) => value).join(" ");
+    const text = `${product.name} ${brandName(product.brand)} ${product.mpn} ${product.sku} ${category?.name ?? ""} ${childName(product)} ${product.summary} ${specValues}`.toLowerCase();
     return [product.slug, { text, compact: normalise(`${product.mpn} ${product.sku}`) }];
   }),
 );
