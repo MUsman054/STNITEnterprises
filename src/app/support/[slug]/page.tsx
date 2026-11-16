@@ -179,7 +179,8 @@ export default async function SupportPage({ params }: PageProps<"/support/[slug]
   const sideNav = [...supportNav, ...legalNav];
   const current = `/support/${slug}`;
   const CurrentIcon = navIcons[current] ?? FileText;
-  const eyebrow = legalNav.some((item) => item.href === current) ? "Legal" : "Customer support";
+  const legal = legalNav.some((item) => item.href === current);
+  const eyebrow = legal ? "Legal" : "Customer support";
   const sections = toSections(page.blocks);
   const toc = sections.filter((section) => section.heading);
 
@@ -188,7 +189,8 @@ export default async function SupportPage({ params }: PageProps<"/support/[slug]
       {/* Header: what this page is. */}
       <header className="border-b border-border bg-surface">
         <div className="container-page pt-2 pb-6 lg:pb-10">
-          <Breadcrumbs crumbs={[{ label: "Support", href: "/support/faqs" }, { label: page.title }]} />
+          {/* Legal pages are not support topics, so their trail is just Home > page. */}
+          <Breadcrumbs crumbs={legal ? [{ label: page.title }] : [{ label: "Support", href: "/support/faqs" }, { label: page.title }]} />
 
           <div className="animate-fade-up mt-3 flex items-start gap-4 lg:mt-5">
             <span className="hidden size-14 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary sm:flex">
