@@ -20,8 +20,12 @@ export type SupportPage = {
   title: string;
   intro?: string;
   notice?: string;
+  /** Key facts shown as a quick summary above the full text. Taken from the policy itself. */
+  highlights?: Highlight[];
   blocks: Block[];
 };
+
+export type Highlight = { icon: "clock" | "map" | "mail" | "rma" | "report" | "refund"; label: string; value: string };
 
 type RawBlock = { type: string; text?: string; items?: string[] };
 
@@ -89,6 +93,11 @@ export const supportPages: Record<string, SupportPage> = {
     title: "Return & Refund Policy",
     intro:
       "Thank you for shopping with us. If you are not fully satisfied with your purchase, you may return it for a refund or exchange, subject to the following terms.",
+    highlights: [
+      { icon: "rma", label: "Before you return", value: "RMA number required" },
+      { icon: "report", label: "Report problems", value: "Within 2 days of delivery" },
+      { icon: "refund", label: "Refund timing", value: "Up to 30 days after inspection" },
+    ],
     blocks: [
       { type: "h2", text: "Return conditions" },
       {
@@ -134,6 +143,12 @@ export const supportPages: Record<string, SupportPage> = {
   },
   "shipping-policy": {
     title: "Shipping Policy",
+    intro: "How and when your order ships, and what to do if something isn't right.",
+    highlights: [
+      { icon: "clock", label: "Processing time", value: "2–5 business days" },
+      { icon: "map", label: "We ship to", value: "Anywhere in the USA" },
+      { icon: "mail", label: "Tracking", value: "Sent by email" },
+    ],
     blocks: [
       { type: "h2", text: "Processing time" },
       { type: "p", text: "Orders are shipped within 2–5 business days." },
