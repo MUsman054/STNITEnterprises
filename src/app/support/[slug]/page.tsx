@@ -185,7 +185,7 @@ export default async function SupportPage({ params }: PageProps<"/support/[slug]
 
   return (
     <>
-      {/* Header: what this page is, then every support topic one tap away. */}
+      {/* Header: what this page is. */}
       <header className="border-b border-border bg-surface">
         <div className="container-page pt-2 pb-6 lg:pb-10">
           <Breadcrumbs crumbs={[{ label: "Support", href: "/support/faqs" }, { label: page.title }]} />
@@ -200,32 +200,6 @@ export default async function SupportPage({ params }: PageProps<"/support/[slug]
               {page.intro && <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground lg:text-[17px]">{page.intro}</p>}
             </div>
           </div>
-
-          {/* Phones and tablets: all topics as a compact grid. Desktop uses the side list. */}
-          <nav aria-label="Support topics" className="mt-6 lg:hidden">
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {sideNav.map((item) => {
-                const active = item.href === current;
-                const Icon = navIcons[item.href] ?? FileText;
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      aria-current={active ? "page" : undefined}
-                      className={`flex h-full min-h-12 items-center gap-2.5 rounded-xl border px-3 py-2 text-sm leading-tight font-semibold transition-colors duration-200 ${
-                        active
-                          ? "border-nav bg-nav text-white"
-                          : "border-border bg-background text-foreground active:border-primary active:bg-primary-soft"
-                      }`}
-                    >
-                      <Icon aria-hidden="true" className={`size-[18px] shrink-0 ${active ? "text-lime" : "text-primary"}`} />
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
         </div>
       </header>
 
