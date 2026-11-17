@@ -143,7 +143,7 @@ function RequestForm({
           setValues((all) => ({ ...all, [field.name]: String(next) }));
           if (errors[field.name]) setErrors((all) => ({ ...all, [field.name]: "" }));
         };
-        const stepButton = "grid flex-1 w-10 place-items-center text-muted-foreground transition-colors duration-150 hover:bg-surface hover:text-foreground";
+        const stepButton = "grid h-4 w-5 place-items-center rounded-sm text-muted-foreground transition-colors duration-150 hover:bg-surface hover:text-foreground";
         return (
           <div key={field.name} className={field.half ? "" : "sm:col-span-2"}>
             <label htmlFor={id} className={labelClass}>
@@ -179,21 +179,15 @@ function RequestForm({
                         }
                       : undefined
                   }
-                  className={`${inputClass} ${field.prefix ? "pl-8" : ""} ${field.stepper ? "pr-12" : ""} ${field.readOnly ? "bg-surface font-semibold" : ""}`}
+                  className={`${inputClass} ${field.prefix ? "pl-8" : ""} ${field.stepper ? "pr-9" : ""} ${field.readOnly ? "bg-surface font-semibold" : ""}`}
                 />
                 {field.stepper && (
-                  <div className="absolute inset-y-px right-px flex flex-col overflow-hidden rounded-r-[7px] border-l border-foreground/25">
+                  <div className="absolute top-1/2 right-2.5 flex -translate-y-1/2 flex-col">
                     <button type="button" tabIndex={-1} aria-label={`Increase ${field.label.toLowerCase()}`} onClick={() => step(1)} className={stepButton}>
-                      <ChevronUp aria-hidden="true" className="size-4" />
+                      <ChevronUp aria-hidden="true" className="size-3.5" strokeWidth={2.5} />
                     </button>
-                    <button
-                      type="button"
-                      tabIndex={-1}
-                      aria-label={`Decrease ${field.label.toLowerCase()}`}
-                      onClick={() => step(-1)}
-                      className={`${stepButton} border-t border-foreground/25`}
-                    >
-                      <ChevronDown aria-hidden="true" className="size-4" />
+                    <button type="button" tabIndex={-1} aria-label={`Decrease ${field.label.toLowerCase()}`} onClick={() => step(-1)} className={stepButton}>
+                      <ChevronDown aria-hidden="true" className="size-3.5" strokeWidth={2.5} />
                     </button>
                   </div>
                 )}
