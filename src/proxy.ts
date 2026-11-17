@@ -5,9 +5,8 @@ import { HUMAN_COOKIE, isValidHumanCookie, turnstileKeys } from "@/server/human-
  * One-time Cloudflare Turnstile check when a visitor opens the site (see src/server/human-check.ts).
  *
  * Page loads without a valid "verified" cookie get a small challenge page at the same URL. When
- * the widget passes, the page posts the token to /api/turnstile, which checks it with Cloudflare
- * and sets the cookie, then the page reloads into the real content. Later navigations go straight
- * through.
+ * the widget passes, the page submits the token to /api/turnstile, which checks it with Cloudflare,
+ * sets the cookie and redirects to the page they opened. Later navigations go straight through.
  *
  * Not gated: API routes (Stripe webhook, Google sign-in callback), Next.js assets, files, search
  * engine and link-preview crawlers (so SEO and shared-link previews keep working), and anything
@@ -33,7 +32,8 @@ export function proxy(request: NextRequest) {
   if (CRAWLER.test(request.headers.get("user-agent") ?? "")) return NextResponse.next();
   if (isValidHumanCookie(request.cookies.get(HUMAN_COOKIE)?.value, keys.secretKey)) return NextResponse.next();
 
-  return new NextResponse(challengePage(keys.siteKey, request.nextUrl.hostname), {
+  const { hostname, pathname, search } = request.nextUrl;
+  return new NextResponse(challengePage(keys.siteKey, hostname, pathname + search), {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
@@ -52,114 +52,112 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-function challengePage(siteKey: string, hostname: string): string {
+const LOGO_SVG = `<svg viewBox="47 335 410 410" width="44" height="44" aria-hidden="true"><path d="M68 437 L252 345 L436 437 L252 529 Z" fill="#6ED653" stroke="#6ED653" stroke-linejoin="round" stroke-width="10"/><path d="M68 540 L110 519 L252 579 L394 519 L436 540 L252 631 Z" fill="#43B02A" stroke="#43B02A" stroke-linejoin="round" stroke-width="10"/><path d="M68 644 L110 623 L252 683 L394 623 L436 644 L252 735 Z" fill="#43B02A" stroke="#43B02A" stroke-linejoin="round" stroke-width="10"/></svg>`;
+
+/**
+ * The challenge page, showing Cloudflare's Turnstile box. On success the form posts the token to
+ * /api/turnstile, which sets the cookie and redirects straight to `next`.
+ */
+function challengePage(siteKey: string, hostname: string, next: string): string {
   const host = escapeHtml(hostname.replace(/^www\./, ""));
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>Just a moment...</title>
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121417" media="(prefers-color-scheme: dark)">
+<title>Just a moment… | STN IT Enterprise</title>
+<link rel="preconnect" href="https://challenges.cloudflare.com">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <style>
   :root {
     color-scheme: light dark;
-    --bg: #ffffff; --fg: #1d1f20; --muted: #595f66; --line: #e5e7eb; --accent: #1f7a1f;
+    --bg: #f3f4f6; --card: #ffffff; --fg: #111418; --muted: #5a6169; --line: #e1e4e8;
+    --accent: #43b02a; --track: #e1e4e8; --error: #b91c1c;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #161819; --fg: #e8eaed; --muted: #a0a6ad; --line: #2c3034; --accent: #6ed653; }
+    :root { --bg: #0a0b0d; --card: #15181c; --fg: #f3f4f6; --muted: #a3abb4; --line: #262b31;
+      --accent: #6ed653; --track: #2a2f36; --error: #fca5a5; }
   }
   * { box-sizing: border-box; }
-  html, body { height: 100%; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
-    margin: 0; display: flex; flex-direction: column;
+    margin: 0; min-height: 100vh; min-height: 100dvh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
     background: var(--bg); color: var(--fg);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  .main { flex: 1; width: 100%; max-width: 60rem; margin: 0 auto; padding: 8rem 1.5rem 2rem; }
-  .site { display: flex; align-items: center; gap: .75rem; margin: 0 0 .75rem; }
-  .site img { width: 2.5rem; height: 2.5rem; border-radius: .5rem; object-fit: cover; }
-  h1 { margin: 0; font-size: 2.25rem; font-weight: 500; line-height: 1.2; word-break: break-word; }
-  .main, footer { overflow-wrap: anywhere; }
-  .lead { margin: 0 0 2rem; font-size: 1.5rem; font-weight: 500; line-height: 1.35; }
-  .widget { min-height: 65px; }
-  .note { margin: 2rem 0 0; max-width: 40rem; color: var(--muted); font-size: 1rem; line-height: 1.5; }
-  .state { display: none; align-items: center; gap: .75rem; font-size: 1rem; }
-  .state.show { display: flex; }
-  .state.error { color: #d93025; }
-  .spinner {
-    width: 1.25rem; height: 1.25rem; border-radius: 50%;
-    border: 2px solid var(--line); border-top-color: var(--accent);
-    animation: spin .8s linear infinite;
+  .card {
+    width: 100%; max-width: 400px; padding: 32px 24px 28px; text-align: center;
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 12px 32px -12px rgba(0,0,0,.12);
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
-  footer {
-    width: 100%; max-width: 60rem; margin: 0 auto; padding: 1rem 1.5rem 1.5rem;
-    border-top: 1px solid var(--line); color: var(--muted); font-size: .75rem;
-    display: flex; flex-wrap: wrap; justify-content: center; gap: .25rem .75rem; text-align: center;
+  .brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 28px; }
+  .brand svg { display: block; flex: none; }
+  .brand-name { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+  h1 { margin: 0 0 8px; font-size: 20px; font-weight: 650; line-height: 1.3; }
+  .sub { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; overflow-wrap: anywhere; }
+  .failed .sub { color: var(--error); }
+  form { margin: 0; }
+  .widget { display: flex; justify-content: center; min-height: 65px; margin-top: 24px; }
+  .done .sub { color: var(--accent); font-weight: 600; }
+  @media (max-width: 359px) {
+    .card { padding: 28px 16px 24px; }
+    .widget { min-height: 140px; }
   }
-  footer a { color: inherit; }
-  noscript p { color: #d93025; }
-  @media (max-width: 720px) {
-    .main { padding-top: 4rem; }
-    h1 { font-size: 1.5rem; }
-    .lead { font-size: 1.125rem; }
+  .retry {
+    display: none; margin: 20px auto 0; padding: 10px 20px; border: 0; border-radius: 999px;
+    background: #1f7a1f; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
   }
+  .failed .retry { display: inline-block; }
+  .foot { margin: 20px 0 0; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.5; }
+  .foot strong { font-weight: 600; color: var(--fg); }
+  noscript p { margin: 16px 0 0; color: var(--error); font-size: 14px; }
 </style>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
-<div class="main" role="main">
-  <div class="site">
-    <img src="/brand/stn-logo-original.jpg" alt="" width="40" height="40">
-    <h1>${host}</h1>
-  </div>
-  <p class="lead" id="lead">Verifying you are human. This may take a few seconds.</p>
-  <div class="widget" id="widget">
-    <div class="cf-turnstile" data-sitekey="${escapeHtml(siteKey)}" data-theme="auto"
-      data-callback="stnVerified" data-error-callback="stnFailed" data-expired-callback="stnExpired"></div>
-  </div>
-  <div class="state" id="state" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span id="state-text"></span></div>
-  <noscript><p>Enable JavaScript and cookies to continue.</p></noscript>
-  <p class="note">${host} needs to review the security of your connection before proceeding.</p>
-</div>
-<footer>
-  <span>Security check by Cloudflare Turnstile</span>
-  <span aria-hidden="true">&middot;</span>
-  <span>&copy; STN IT Enterprise</span>
-</footer>
+<main class="card" id="card">
+  <div class="brand">${LOGO_SVG}<span class="brand-name">STN IT Enterprise</span></div>
+  <h1 id="title">Verify you are human</h1>
+  <p class="sub" id="sub" role="status" aria-live="polite">Complete the quick security check below to continue to ${host}.</p>
+  <form id="form" method="post" action="/api/turnstile">
+    <input type="hidden" name="next" value="${escapeHtml(next)}">
+    <div class="widget" id="widget"></div>
+  </form>
+  <button type="button" class="retry" onclick="location.reload()">Try again</button>
+  <noscript><p>Please enable JavaScript and cookies to continue.</p></noscript>
+</main>
+<p class="foot">Protected by <strong>Cloudflare Turnstile</strong></p>
 <script>
-  var stateEl = document.getElementById("state");
-  var stateText = document.getElementById("state-text");
-  var leadEl = document.getElementById("lead");
-  function show(text, isError) {
-    stateText.textContent = text;
-    stateEl.className = "state show" + (isError ? " error" : "");
-    stateEl.firstChild.style.display = isError ? "none" : "";
+  var card = document.getElementById("card");
+  function stnVerified() {
+    card.className = "card done";
+    document.getElementById("sub").textContent = "Verified. Taking you to the site…";
+    document.getElementById("form").submit();
   }
-  function stnFailed() { show("Verification failed. Refresh the page to try again.", true); }
-  function stnExpired() { show("The check expired. Please complete it again.", true); }
-  function stnVerified(token) {
-    leadEl.textContent = "Verification successful.";
-    show("Waiting for ${host} to respond...", false);
-    fetch("/api/turnstile", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ token: token })
-    }).then(function (res) {
-      if (!res.ok) throw new Error("rejected");
-      window.location.reload();
-    }).catch(function () {
-      leadEl.textContent = "Verifying you are human. This may take a few seconds.";
-      show("We couldn't verify your connection. Please try again.", true);
-      if (window.turnstile) window.turnstile.reset();
+  function stnFailed() {
+    card.className = "card failed";
+    document.getElementById("title").textContent = "Verification failed";
+    document.getElementById("sub").textContent = "We couldn't verify your browser. Please try again.";
+  }
+  // Rendered explicitly so very narrow phones get Cloudflare's compact box (the normal one is 300px wide).
+  function stnLoad() {
+    window.turnstile.render("#widget", {
+      sitekey: ${JSON.stringify(siteKey).replace(/</g, "\\u003c")},
+      theme: "auto",
+      size: window.innerWidth < 360 ? "compact" : "normal",
+      "refresh-expired": "auto",
+      callback: stnVerified,
+      "error-callback": stnFailed,
+      "unsupported-callback": stnFailed
     });
   }
 </script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&amp;onload=stnLoad" async></script>
 </body>
 </html>`;
 }

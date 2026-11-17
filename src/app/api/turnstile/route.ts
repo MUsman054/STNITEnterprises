@@ -1,33 +1,49 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { HUMAN_COOKIE, createHumanCookie, turnstileKeys, verifyTurnstileToken } from "@/server/human-check";
 
-/** Receives the Turnstile token from the challenge page (src/proxy.ts) and sets the "verified" cookie. */
-export async function POST(request: NextRequest) {
-  const keys = turnstileKeys();
-  if (!keys) return NextResponse.json({ ok: true });
+/**
+ * The challenge page (src/proxy.ts) submits its form here once the Turnstile widget passes.
+ * We check the token with Cloudflare, set the "verified" cookie and send the visitor straight
+ * on to the page they opened, in one round trip.
+ */
 
-  // Same-origin only: the challenge page posts here with fetch().
+/** Only same-site paths, so this can't be used as an open redirect. */
+function safeNext(value: FormDataEntryValue | null): string {
+  if (typeof value !== "string" || value.length > 2048) return "/";
+  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return "/";
+  return value;
+}
+
+export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   if (origin && origin !== request.nextUrl.origin) {
-    return NextResponse.json({ ok: false }, { status: 403 });
+    return new NextResponse("Forbidden", { status: 403 });
   }
 
-  let token: unknown;
+  let form: FormData;
   try {
-    token = ((await request.json()) as { token?: unknown }).token;
+    form = await request.formData();
   } catch {
-    token = undefined;
+    return new NextResponse("Bad request", { status: 400 });
   }
-  if (typeof token !== "string" || token.length === 0 || token.length > 4096) {
-    return NextResponse.json({ ok: false }, { status: 400 });
-  }
+  const next = safeNext(form.get("next"));
+  const response = NextResponse.redirect(new URL(next, request.nextUrl.origin), 303);
+  response.headers.set("Cache-Control", "no-store");
 
+  const keys = turnstileKeys();
+  if (!keys) return response;
+
+  const token = form.get("cf-turnstile-response");
   const remoteIp = request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  if (!(await verifyTurnstileToken(token, keys.secretKey, remoteIp || undefined))) {
-    return NextResponse.json({ ok: false }, { status: 403 });
-  }
+  const passed =
+    typeof token === "string" &&
+    token.length > 0 &&
+    token.length <= 4096 &&
+    (await verifyTurnstileToken(token, keys.secretKey, remoteIp || undefined));
 
-  const response = NextResponse.json({ ok: true });
+  // Failed: back to the same page, which shows the challenge again.
+  if (!passed) return response;
+
   response.cookies.set(HUMAN_COOKIE, createHumanCookie(keys.secretKey), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -35,6 +51,5 @@ export async function POST(request: NextRequest) {
     path: "/",
     // No maxAge: a session cookie, so the check runs once per browser session.
   });
-  response.headers.set("Cache-Control", "no-store");
   return response;
 }
