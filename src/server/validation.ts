@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { MAX_QTY } from "@/lib/cart-limits";
 import { invitableRoles } from "@/lib/roles";
-import { usStates } from "@/lib/order";
+import { countryCodeSet, usStates } from "@/lib/order";
 
 /**
  * Server-side input validation. The browser validates too (for quick feedback), but only
@@ -91,9 +91,11 @@ export const checkoutSchema = z.object({
   company: optionalText(120),
   address1: requiredText(200, "Enter your street address."),
   address2: optionalText(200),
+  country: z.string().refine((value) => countryCodeSet.has(value), "Choose your country."),
+  // US addresses need a state and a 5-digit ZIP; elsewhere both are optional (checked below).
+  state: text(100),
   city: requiredText(100, "Enter your city."),
-  state: z.string().refine((value) => stateCodes.has(value), "Choose your state."),
-  zip: text(10).pipe(z.string().regex(/^\d{5}(-\d{4})?$/, "Enter a 5-digit ZIP code, like 33702.")),
+  zip: text(20),
   notes: optionalText(2000),
   agree: z.literal(true, "Please accept the terms to place your order."),
   payment: z.enum(["card", "bank"]),
@@ -106,6 +108,10 @@ export const checkoutSchema = z.object({
     )
     .min(1, "Your cart is empty.")
     .max(100),
+}).superRefine((data, ctx) => {
+  if (data.country !== "US") return;
+  if (!stateCodes.has(data.state)) ctx.addIssue({ code: "custom", path: ["state"], message: "Choose your state." });
+  if (!/^\d{5}(-\d{4})?$/.test(data.zip)) ctx.addIssue({ code: "custom", path: ["zip"], message: "Enter a 5-digit ZIP code, like 33702." });
 });
 
 export const password = z
