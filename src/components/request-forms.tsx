@@ -304,7 +304,7 @@ export function QuoteRequest({
               fields={[
                 { name: "part", label: "Part number", readOnly: true },
                 { name: "name", label: "Your name", required: true, autoComplete: "name", half: true },
-                { name: "email", label: "Email address or phone number", type: "contact", required: true, autoComplete: "email", half: true },
+                { name: "email", label: "Email Address or Phone Number", type: "contact", required: true, autoComplete: "email", half: true },
                 { name: "targetPrice", label: "Target price (each)", type: "number", inputMode: "decimal", prefix: "$", half: true, validate: positiveNumber("a target price"), hint: "Optional. Helps us match your budget." },
                 { name: "quantity", label: "Quantity", type: "number", required: true, inputMode: "numeric", stepper: true, half: true, validate: (v) => (/^\d+$/.test(v) && Number(v) > 0 ? null : "Enter a whole number of 1 or more.") },
                 { name: "message", label: "Notes", type: "textarea" },
