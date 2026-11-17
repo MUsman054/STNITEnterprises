@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { eq } from "drizzle-orm";
-import { addressLines, orderStatusLabel } from "@/lib/order";
+import { orderStatusLabel } from "@/lib/order";
 import { formatPrice } from "@/lib/site";
 import { cardClass } from "@/lib/ui";
 import { can } from "@/lib/roles";
@@ -104,11 +104,13 @@ async function OrderDetail({ params }: { params: PageProps<"/admin/orders/[id]">
             {dl(
               "Ship to",
               <>
-                {addressLines(order).map((line) => (
-                  <span key={line} className="block">
-                    {line}
-                  </span>
-                ))}
+                {[order.company, order.address1, order.address2, `${order.city}, ${order.state} ${order.zip}`]
+                  .filter(Boolean)
+                  .map((line) => (
+                    <span key={line} className="block">
+                      {line}
+                    </span>
+                  ))}
               </>,
             )}
             {order.notes && dl("Notes", <span className="whitespace-pre-wrap">{order.notes}</span>)}

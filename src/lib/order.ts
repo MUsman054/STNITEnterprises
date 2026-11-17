@@ -85,21 +85,3 @@ export const countries: [code: string, name: string][] = [
     .map((code): [string, string] => [code, countryName(code)])
     .sort((a, b) => a[1].localeCompare(b[1])),
 ];
-
-export const countryCodeSet = new Set(countryCodes);
-
-/** Shipping address as display lines, e.g. "Houston, TX 77084" then "United States". */
-export function addressLines(address: {
-  company: string | null;
-  address1: string;
-  address2: string | null;
-  city: string;
-  state: string;
-  zip: string;
-  country: string;
-}) {
-  const region = [address.state, address.zip].filter(Boolean).join(" ");
-  return [address.company, address.address1, address.address2, [address.city, region].filter(Boolean).join(", "), countryName(address.country)].filter(
-    (line): line is string => Boolean(line),
-  );
-}

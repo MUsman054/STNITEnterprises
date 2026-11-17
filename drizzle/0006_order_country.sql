@@ -1,1 +1,0 @@
-ALTER TABLE "orders" ADD COLUMN "country" text DEFAULT 'US' NOT NULL;

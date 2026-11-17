@@ -1,5 +1,4 @@
 import "server-only";
-import { addressLines } from "@/lib/order";
 import { formatPrice, site } from "@/lib/site";
 import { appUrl, config, isProduction } from "@/server/env";
 import { escapeHtml as e, singleLine } from "@/server/security";
@@ -76,7 +75,14 @@ function itemsTable(items: OrderItem[], order: Order): string {
 }
 
 function addressBlock(order: Order): string {
-  return [`${order.firstName} ${order.lastName}`, ...addressLines(order)]
+  return [
+    `${order.firstName} ${order.lastName}`,
+    order.company,
+    order.address1,
+    order.address2,
+    `${order.city}, ${order.state} ${order.zip}`,
+  ]
+    .filter(Boolean)
     .map((line) => e(line))
     .join("<br>");
 }

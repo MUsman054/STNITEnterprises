@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { OrderConfirmationView, OrderNotFound } from "@/components/order-confirmation-view";
-import { addressLines } from "@/lib/order";
 import { config } from "@/server/env";
 import { getOrderByAccessToken, markOrderPaid } from "@/server/orders";
 import { stripe } from "@/server/stripe";
@@ -75,7 +74,9 @@ async function OrderDetails({ searchParams }: { searchParams: PageProps<"/order-
         lastName: order.lastName,
         email: order.email,
         notes: order.notes,
-        addressLines: addressLines(order),
+        addressLines: [order.company, order.address1, order.address2, `${order.city}, ${order.state} ${order.zip}`].filter(
+          (line): line is string => Boolean(line),
+        ),
         subtotalCents: order.subtotalCents,
         shippingCents: order.shippingCents,
         totalCents: order.totalCents,
