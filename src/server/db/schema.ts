@@ -140,6 +140,8 @@ export const orders = pgTable(
     city: text("city").notNull(),
     state: text("state").notNull(),
     zip: text("zip").notNull(),
+    /** ISO 3166-1 alpha-2 code, e.g. "US". State and ZIP may be empty outside the US. */
+    country: text("country").notNull().default("US"),
     notes: text("notes"),
 
     currency: text("currency").notNull().default("usd"),

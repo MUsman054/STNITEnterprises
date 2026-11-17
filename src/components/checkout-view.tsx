@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import { CreditCard, Info, Landmark, Lock, ShoppingBag } from "lucide-react";
 import { placeOrder } from "@/actions/checkout";
 import { useCart } from "@/lib/cart-store";
-import { paymentMethods, usStates, type PaymentMethodId } from "@/lib/order";
+import { countries, paymentMethods, usStates, type PaymentMethodId } from "@/lib/order";
 import { formatPrice, site } from "@/lib/site";
 import { btnPrimary, cardClass, inputClass, labelClass } from "@/lib/ui";
 import { ProductImage } from "@/components/product-image";
@@ -19,8 +19,9 @@ const fieldOrder = [
   "company",
   "address1",
   "address2",
-  "city",
+  "country",
   "state",
+  "city",
   "zip",
   "notes",
   "agree",
@@ -38,8 +39,9 @@ const emptyValues: Values = {
   company: "",
   address1: "",
   address2: "",
-  city: "",
+  country: "US",
   state: "",
+  city: "",
   zip: "",
   notes: "",
 };
@@ -59,11 +61,15 @@ function validate(values: Values, agree: boolean): Errors {
   if (!v("firstName")) errors.firstName = "Enter your first name.";
   if (!v("lastName")) errors.lastName = "Enter your last name.";
   if (!v("address1")) errors.address1 = "Enter your street address.";
+  if (!v("country")) errors.country = "Choose your country.";
   if (!v("city")) errors.city = "Enter your city.";
-  if (!v("state")) errors.state = "Choose your state.";
 
-  if (!v("zip")) errors.zip = "Enter your ZIP code.";
-  else if (!/^\d{5}(-\d{4})?$/.test(v("zip"))) errors.zip = "Enter a 5-digit ZIP code, like 33702.";
+  // State and ZIP are required for US addresses only; many countries have neither.
+  if (v("country") === "US") {
+    if (!v("state")) errors.state = "Choose your state.";
+    if (!v("zip")) errors.zip = "Enter your ZIP code.";
+    else if (!/^\d{5}(-\d{4})?$/.test(v("zip"))) errors.zip = "Enter a 5-digit ZIP code, like 33702.";
+  }
 
   if (!agree) errors.agree = "Please accept the terms to place your order.";
   return errors;
@@ -73,6 +79,14 @@ const paymentIcons: Record<PaymentMethodId, typeof CreditCard> = {
   card: CreditCard,
   bank: Landmark,
 };
+
+function RequiredMark() {
+  return (
+    <span aria-hidden="true" className="ml-0.5 text-sale">
+      *
+    </span>
+  );
+}
 
 function TextField({
   name,
@@ -95,7 +109,7 @@ function TextField({
     <div>
       <label htmlFor={id} className={labelClass}>
         {label}
-        {optional && <span className="ml-1.5 font-normal text-muted-foreground">(optional)</span>}
+        {optional ? <span className="ml-1.5 font-normal text-muted-foreground">(optional)</span> : <RequiredMark />}
       </label>
       <input
         id={id}
@@ -135,6 +149,7 @@ export function CheckoutView({ enabledMethods }: { enabledMethods: PaymentMethod
   const placing = pending || redirecting;
 
   const total = subtotal + site.shipping.cost;
+  const isUS = values.country === "US";
   const errorCount = Object.keys(errors).length;
 
   function handleChange(name: keyof Values, value: string) {
@@ -327,18 +342,49 @@ export function CheckoutView({ enabledMethods }: { enabledMethods: PaymentMethod
                 onChange={handleChange}
               />
             </div>
-            <TextField
-              name="city"
-              label="City"
-              autoComplete="address-level2"
-              value={values.city}
-              error={errors.city}
-              onChange={handleChange}
-            />
-            <div className="grid grid-cols-2 gap-5">
+            <div>
+              <label htmlFor="checkout-country" className={labelClass}>
+                Country
+                <RequiredMark />
+              </label>
+              <select
+                id="checkout-country"
+                name="country"
+                autoComplete="country"
+                required
+                value={values.country}
+                onChange={(event) => {
+                  // A US state code means nothing in another country (and vice versa), so start over.
+                  setValues((current) => ({ ...current, country: event.target.value, state: "" }));
+                  setErrors((current) => {
+                    const next = { ...current };
+                    delete next.country;
+                    delete next.state;
+                    delete next.zip;
+                    return next;
+                  });
+                }}
+                aria-invalid={errors.country ? true : undefined}
+                aria-describedby={errors.country ? "checkout-country-error" : undefined}
+                className={inputClass}
+              >
+                {countries.map(([code, name]) => (
+                  <option key={code} value={code}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              {errors.country && (
+                <p id="checkout-country-error" className="mt-1.5 text-sm font-medium text-sale">
+                  {errors.country}
+                </p>
+              )}
+            </div>
+            {isUS ? (
               <div>
                 <label htmlFor="checkout-state" className={labelClass}>
                   State
+                  <RequiredMark />
                 </label>
                 <select
                   id="checkout-state"
@@ -364,16 +410,35 @@ export function CheckoutView({ enabledMethods }: { enabledMethods: PaymentMethod
                   </p>
                 )}
               </div>
+            ) : (
               <TextField
-                name="zip"
-                label="ZIP code"
-                autoComplete="postal-code"
-                inputMode="numeric"
-                value={values.zip}
-                error={errors.zip}
+                name="state"
+                label="State / Province"
+                optional
+                autoComplete="address-level1"
+                value={values.state}
+                error={errors.state}
                 onChange={handleChange}
               />
-            </div>
+            )}
+            <TextField
+              name="city"
+              label="City"
+              autoComplete="address-level2"
+              value={values.city}
+              error={errors.city}
+              onChange={handleChange}
+            />
+            <TextField
+              name="zip"
+              label={isUS ? "ZIP code" : "ZIP / Postal code"}
+              optional={!isUS}
+              autoComplete="postal-code"
+              inputMode={isUS ? "numeric" : "text"}
+              value={values.zip}
+              error={errors.zip}
+              onChange={handleChange}
+            />
           </div>
 
           <p className="mt-5 flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-4 text-[15px]">

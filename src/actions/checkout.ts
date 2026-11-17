@@ -58,6 +58,7 @@ export async function placeOrder(input: unknown): Promise<ActionResult<{ redirec
         city: data.city,
         state: data.state,
         zip: data.zip,
+        country: data.country,
         notes: data.notes,
       },
     });
