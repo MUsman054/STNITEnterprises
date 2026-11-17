@@ -53,9 +53,9 @@ const { phone, salesEmail } = site.contact;
 export const faqs: { question: string; answer: string }[] = [
   {
     question: "How long does shipping take?",
-    answer: "Orders ship within 2–5 business days. Tracking information is emailed to you as soon as it is available.",
+    answer: "Orders within the US ship in 2–5 business days. Tracking information is emailed to you as soon as it is available.",
   },
-  { question: "Where do you ship?", answer: "We ship anywhere in the USA." },
+  { question: "Where do you ship?", answer: "We ship anywhere in the world." },
   { question: "Where can I view my sales receipt?", answer: "Your invoice will be shared with you by email." },
   {
     question: "How can I return an item?",
@@ -137,9 +137,9 @@ export const supportPages: Record<string, SupportPage> = {
     intro: "How and when your order ships, and what to do if something isn't right.",
     blocks: [
       { type: "h2", text: "Processing time" },
-      { type: "p", text: "Orders are shipped within 2–5 business days." },
+      { type: "p", text: "Orders within the US are shipped in 2–5 business days." },
       { type: "h2", text: "Where we ship" },
-      { type: "p", text: "We ship anywhere in the USA." },
+      { type: "p", text: "We ship anywhere in the world." },
       { type: "h2", text: "Tracking" },
       { type: "p", text: "Tracking information will be emailed to you once it is available." },
       { type: "h2", text: "Delivery issues" },

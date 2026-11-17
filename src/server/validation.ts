@@ -29,6 +29,14 @@ export const email = text(254)
   .transform((value) => value.toLowerCase())
   .pipe(z.email("Enter a valid email address, like name@example.com."));
 
+/** Quote requests: an email address (lower-cased) or a phone number, stored in the email column. */
+const emailOrPhone = requiredText(254, "Enter your email address or phone number.")
+  .transform((value) => (value.includes("@") ? value.toLowerCase() : value))
+  .refine(
+    (value) => (value.includes("@") ? z.email().safeParse(value).success : /^\+?[\d\s().-]+$/.test(value) && value.replace(/\D/g, "").length >= 7),
+    "Enter a valid email address or phone number.",
+  );
+
 /** Honeypot: a hidden field real people never fill in. */
 const honeypot = z.string().max(500).optional();
 
@@ -53,7 +61,7 @@ export const requestSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("quote"),
     name: requiredText(120, "Enter your name."),
-    email,
+    email: emailOrPhone,
     part: requiredText(80, "Enter a part number."),
     quantity: text(7).pipe(z.string().regex(/^\d+$/, "Enter a whole number of 1 or more.")).transform(Number).pipe(z.number().int().min(1).max(1_000_000)),
     targetPrice: money.optional().transform((value) => value ?? null),

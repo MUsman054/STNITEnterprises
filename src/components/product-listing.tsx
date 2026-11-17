@@ -22,6 +22,7 @@ const PAGE_SIZE = 12;
 type Filters = {
   groups: string[];
   brands: string[];
+  capacities: string[];
   conditions: string[];
   availability: ("in" | "out")[];
   min: string;
@@ -29,7 +30,22 @@ type Filters = {
   dealsOnly: boolean;
 };
 
-const noFilters: Filters = { groups: [], brands: [], conditions: [], availability: [], min: "", max: "", dealsOnly: false };
+const noFilters: Filters = { groups: [], brands: [], capacities: [], conditions: [], availability: [], min: "", max: "", dealsOnly: false };
+
+/** The product's "Capacity" spec (memory and drives), e.g. "500GB" or "1.2TB". */
+function capacityOf(product: Product) {
+  return product.specs.find(([label]) => label === "Capacity")?.[1] ?? null;
+}
+
+const capacityUnits: Record<string, number> = { MB: 1, GB: 1024, TB: 1024 ** 2 };
+
+/** Capacity in MB, for sorting sizes smallest to largest. */
+function capacitySize(text: string) {
+  const match = /([\d.]+)\s*(MB|GB|TB)/i.exec(text);
+  return match ? Number.parseFloat(match[1]) * capacityUnits[match[2].toUpperCase()] : Number.POSITIVE_INFINITY;
+}
+
+const CAPACITY_PREVIEW = 6;
 
 function toggle<T>(list: T[], value: T) {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
@@ -56,6 +72,7 @@ function applyFilters(list: Product[], f: Filters, byChild: boolean, skip?: keyo
     return (
       (skip === "groups" || !f.groups.length || f.groups.includes(groupOf(p, byChild))) &&
       (skip === "brands" || !f.brands.length || f.brands.includes(p.brand)) &&
+      (skip === "capacities" || !f.capacities.length || f.capacities.includes(capacityOf(p) ?? "")) &&
       (skip === "conditions" || !f.conditions.length || f.conditions.includes(p.condition)) &&
       (skip === "availability" || !f.availability.length || f.availability.includes(available)) &&
       (skip === "min" || min === null || p.price >= min) &&
@@ -107,6 +124,13 @@ function FilterPanel({
 }) {
   const groupCounts = countBy(applyFilters(base, filters, byChild, "groups"), (p) => groupOf(p, byChild));
   const brandCounts = countBy(applyFilters(base, filters, byChild, "brands"), (p) => p.brand);
+  const capacityCounts = countBy(applyFilters(base, filters, byChild, "capacities"), (p) => capacityOf(p) ?? "");
+  const allCapacities = [...new Set(base.map(capacityOf).filter((c): c is string => c !== null))].sort((a, b) => capacitySize(a) - capacitySize(b));
+  const [showAllCapacities, setShowAllCapacities] = useState(false);
+  const capacityList =
+    showAllCapacities || allCapacities.length <= CAPACITY_PREVIEW + 1
+      ? allCapacities
+      : allCapacities.filter((c, i) => i < CAPACITY_PREVIEW || filters.capacities.includes(c));
   const conditionCounts = countBy(applyFilters(base, filters, byChild, "conditions"), (p) => p.condition);
   const availabilityCounts = countBy(applyFilters(base, filters, byChild, "availability"), (p) => (p.stock === "out" ? "out" : "in"));
   const dealCount = applyFilters(base, filters, byChild, "dealsOnly").filter((p) => discountPercent(p) !== null).length;
@@ -226,6 +250,32 @@ function FilterPanel({
         </fieldset>
       )}
 
+      {allCapacities.length > 1 && (
+        <fieldset>
+          <legend className={legend}>Capacity</legend>
+          {capacityList.map((capacity) => {
+            const n = capacityCounts.get(capacity) ?? 0;
+            return (
+              <label key={capacity} className={`${option} ${muted(n)}`}>
+                <input type="checkbox" className={box} checked={filters.capacities.includes(capacity)} onChange={() => setFilters({ ...filters, capacities: toggle(filters.capacities, capacity) })} />
+                {capacity}
+                <span className={count}>{n}</span>
+              </label>
+            );
+          })}
+          {allCapacities.length > CAPACITY_PREVIEW + 1 && (
+            <button
+              type="button"
+              aria-expanded={showAllCapacities}
+              onClick={() => setShowAllCapacities(!showAllCapacities)}
+              className="min-h-11 px-1 text-[14px] font-semibold text-primary underline-offset-4 hover:underline"
+            >
+              {showAllCapacities ? "Show fewer" : `Show all ${allCapacities.length} sizes`}
+            </button>
+          )}
+        </fieldset>
+      )}
+
       <fieldset>
         <legend className={legend}>Condition</legend>
         {["New", "Refurbished"].map((condition) => {
@@ -329,6 +379,7 @@ export function ProductListing({
         }]
       : []),
     ...filters.brands.map((brand) => ({ key: `b-${brand}`, label: brandName(brand), clear: () => setFilters({ ...filters, brands: filters.brands.filter((b) => b !== brand) }) })),
+    ...filters.capacities.map((cap) => ({ key: `cap-${cap}`, label: cap, clear: () => setFilters({ ...filters, capacities: filters.capacities.filter((x) => x !== cap) }) })),
     ...filters.conditions.map((c) => ({ key: `c-${c}`, label: c, clear: () => setFilters({ ...filters, conditions: filters.conditions.filter((x) => x !== c) }) })),
     ...filters.availability.map((a) => ({ key: `a-${a}`, label: a === "in" ? "In stock" : "Out of stock", clear: () => setFilters({ ...filters, availability: filters.availability.filter((x) => x !== a) }) })),
     ...(filters.dealsOnly ? [{ key: "deals", label: "On sale", clear: () => setFilters({ ...filters, dealsOnly: false }) }] : []),

@@ -172,7 +172,7 @@ export async function sendInquiryNotification(inquiry: Inquiry) {
   const label = inquiryLabel[inquiry.kind];
   const rows: [string, string | null][] = [
     ["Name", inquiry.name],
-    ["Email", inquiry.email],
+    [inquiry.email.includes("@") ? "Email" : "Phone", inquiry.email],
     ["Part number", inquiry.partNumber],
     ["Quantity", inquiry.quantity?.toString() ?? null],
     ["Target price (each)", inquiry.targetPriceCents != null ? formatPrice(inquiry.targetPriceCents / 100) : null],
@@ -181,13 +181,13 @@ export async function sendInquiryNotification(inquiry: Inquiry) {
 
   await sendEmail({
     to: config.notifyEmail(),
-    replyTo: inquiry.email,
+    ...(inquiry.email.includes("@") ? { replyTo: inquiry.email } : {}),
     subject: `${label} from ${inquiry.name}${inquiry.partNumber ? ` · ${inquiry.partNumber}` : ""}`,
     html: layout(
       label,
       present.map(([k, v]) => p(`<strong>${e(k)}:</strong> ${e(v)}`)).join("") +
         (inquiry.message ? `<div style="white-space:pre-wrap;background:#f4f5f7;border-radius:8px;padding:14px;font-size:15px">${e(inquiry.message)}</div>` : "") +
-        p(`<br>Reply to this email to answer ${e(inquiry.name)} directly.`),
+        p(inquiry.email.includes("@") ? `<br>Reply to this email to answer ${e(inquiry.name)} directly.` : `<br>Call or text ${e(inquiry.name)} on the number above.`),
     ),
     text: `${label}\n\n${present.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${inquiry.message ?? ""}`,
   });

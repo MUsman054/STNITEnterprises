@@ -173,7 +173,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
 
           <ul className="mt-6 grid gap-3 border-t border-border pt-5 text-[14px] sm:grid-cols-3">
             {[
-              { icon: Truck, title: "Free US shipping", body: "Ships in 2–5 business days", href: "/support/shipping-policy" },
+              { icon: Truck, title: "Free US shipping", body: "2–5 business days in the US", href: "/support/shipping-policy" },
               { icon: RotateCcw, title: "RMA returns", body: "See the return policy", href: "/support/return-policy" },
               { icon: Lock, title: "Secure checkout", body: "Encrypted payments", href: undefined },
             ].map(({ icon: Icon, title, body, href }) => (
@@ -230,8 +230,8 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
                   <div>
                     <h3 className="font-bold">Shipping</h3>
                     <ul className="mt-2 list-disc space-y-1.5 pl-5 marker:text-brand">
-                      <li>Orders ship within 2–5 business days.</li>
-                      <li>We ship anywhere in the USA.</li>
+                      <li>Orders within the US ship in 2–5 business days.</li>
+                      <li>We ship anywhere in the world.</li>
                       <li>Tracking is emailed once available.</li>
                     </ul>
                     <Link href="/support/shipping-policy" className="mt-3 inline-flex min-h-11 items-center font-semibold text-primary hover:underline">

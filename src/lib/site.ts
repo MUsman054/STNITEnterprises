@@ -27,8 +27,8 @@ export const site = {
     label: "Standard shipping",
     cost: 0,
     /** From the client's shipping policy (content PDF). */
-    estimate: "Ships within 2–5 business days",
-    region: "Anywhere in the USA",
+    estimate: "Ships within 2–5 business days in the US",
+    region: "Anywhere in the world",
   },
   /**
    * Social profiles. Leave a value empty until the client provides the URL; empty

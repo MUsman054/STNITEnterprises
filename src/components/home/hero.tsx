@@ -168,7 +168,7 @@ export function Hero() {
         <ul className="flex flex-wrap gap-x-8 gap-y-2 px-1 pt-4 text-[14px] text-muted-foreground">
           <li className="flex items-center gap-2">
             <Truck aria-hidden="true" className="size-4 text-primary" />
-            Ships in 2–5 business days
+            Ships in 2–5 business days in the US
           </li>
           <li className="flex items-center gap-2">
             <ShieldCheck aria-hidden="true" className="size-4 text-primary" />

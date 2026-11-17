@@ -51,7 +51,7 @@ async function InquiriesTable() {
               <td className={td}>{kindLabel[row.kind]}</td>
               <td className={td}>
                 {row.name}
-                <a className="block text-primary underline" href={`mailto:${row.email}`}>
+                <a className="block text-primary underline" href={row.email.includes("@") ? `mailto:${row.email}` : `tel:${row.email.replace(/[^\d+]/g, "")}`}>
                   {row.email}
                 </a>
               </td>
