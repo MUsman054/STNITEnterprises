@@ -271,6 +271,7 @@ export function QuoteRequest({
       <dialog
         ref={dialogRef}
         className="modal"
+        style={{ width: "min(640px, calc(100vw - 24px))" }}
         aria-labelledby="quote-title"
         onClose={() => setOpen(false)}
         onClick={(event) => {
