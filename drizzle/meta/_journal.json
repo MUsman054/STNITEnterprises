@@ -33,8 +33,22 @@
     {
       "idx": 4,
       "version": "7",
-      "when": 1794933898589,
-      "tag": "0004_order_country",
+      "when": 1794930504925,
+      "tag": "0004_product_reviews",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794931960234,
+      "tag": "0005_review_replies",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794934305765,
+      "tag": "0006_order_country",
       "breakpoints": true
     }
   ]

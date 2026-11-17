@@ -9,11 +9,12 @@ import { requireStaff } from "@/server/auth";
  * get a 404 and never see the admin UI. Render it inside <Suspense> (it reads cookies).
  * The content components check again on their own, as defence in depth.
  */
-type Tab = "orders" | "inquiries" | "subscribers" | "team";
+type Tab = "orders" | "inquiries" | "reviews" | "subscribers" | "team";
 
 const allTabs: { key: Tab; href: string; label: string; permission: Permission }[] = [
   { key: "orders", href: "/admin", label: "Orders", permission: "orders:view" },
   { key: "inquiries", href: "/admin/inquiries", label: "Inquiries", permission: "inquiries" },
+  { key: "reviews", href: "/admin/reviews", label: "Reviews", permission: "reviews" },
   { key: "subscribers", href: "/admin/subscribers", label: "Subscribers", permission: "subscribers" },
   { key: "team", href: "/admin/team", label: "Team", permission: "team:view" },
 ];

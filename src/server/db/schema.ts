@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { check, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import type { CartLine } from "@/lib/shopping-lists";
 
 /**
@@ -181,6 +181,46 @@ export const orderItems = pgTable(
   (table) => [index("order_items_order_idx").on(table.orderId)],
 );
 
+// ---------- product reviews ----------
+
+/** published: shown on the site. hidden: taken down by staff (kept so the customer can't simply re-post). */
+export const reviewStatus = pgEnum("review_status", ["published", "hidden"]);
+
+/**
+ * Customer reviews. Only signed-in customers with a paid order containing the product can
+ * write one (checked in the Server Action), so every review is a verified purchase.
+ * One review per customer per product: writing again updates the existing one.
+ */
+export const reviews = pgTable(
+  "reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productSlug: text("product_slug").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** The order that proves the purchase. */
+    orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
+    rating: integer("rating").notNull(),
+    title: text("title"),
+    body: text("body").notNull(),
+    /** Public name, e.g. "Umar S." (never the email). */
+    authorName: text("author_name").notNull(),
+    status: reviewStatus("status").notNull().default("published"),
+    /** The store's public response, written from the admin panel. */
+    replyBody: text("reply_body"),
+    replyAt: timestamp("reply_at", { withTimezone: true }),
+    replyBy: uuid("reply_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("reviews_product_user_idx").on(table.productSlug, table.userId),
+    index("reviews_product_status_idx").on(table.productSlug, table.status),
+    index("reviews_created_idx").on(table.createdAt),
+    check("reviews_rating_range", sql`${table.rating} between 1 and 5`),
+  ],
+);
+
 // ---------- inquiries and newsletter ----------
 
 export const inquiryKind = pgEnum("inquiry_kind", ["contact", "quote", "part"]);
@@ -226,3 +266,4 @@ export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export type Inquiry = typeof inquiries.$inferSelect;
+export type Review = typeof reviews.$inferSelect;

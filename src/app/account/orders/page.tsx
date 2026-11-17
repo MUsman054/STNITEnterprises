@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Info, LockKeyhole, Package } from "lucide-react";
+import { Info, LockKeyhole, Package, PenLine } from "lucide-react";
 import { Breadcrumbs } from "@/components/page-banner";
 import { orderStatusLabel, paymentMethods } from "@/lib/order";
 import { formatPrice } from "@/lib/site";
 import { btnOutline, btnPrimary, cardClass } from "@/lib/ui";
 import { getCurrentUser } from "@/server/auth";
 import { getOrdersForUser } from "@/server/orders";
+import { reviewableOrderStatuses, reviewedSlugs } from "@/server/reviews";
 
 export const metadata: Metadata = { title: "Order History", robots: { index: false } };
 
@@ -32,7 +33,7 @@ export default function OrdersPage() {
 async function Orders() {
   const user = await getCurrentUser();
   if (!user) return <SignInPrompt />;
-  const orders = await getOrdersForUser(user.id);
+  const [orders, reviewed] = await Promise.all([getOrdersForUser(user.id), reviewedSlugs(user.id)]);
 
   if (orders.length === 0) {
     return (
@@ -86,7 +87,18 @@ async function Orders() {
                   <Link href={`/product/${item.productSlug}`} className="-my-1.5 min-w-0 py-3 text-foreground hover:text-primary hover:underline">
                     {item.productName} <span className="text-muted-foreground">× {item.quantity}</span>
                   </Link>
-                  <span className="shrink-0 font-semibold tabular-nums">{formatPrice(item.lineTotalCents / 100)}</span>
+                  <span className="flex shrink-0 items-center gap-4">
+                    {reviewableOrderStatuses.includes(order.status) && (
+                      <Link
+                        href={`/product/${item.productSlug}/reviews#write`}
+                        className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border px-3 text-[13px] font-semibold text-foreground hover:border-primary hover:text-primary"
+                      >
+                        <PenLine aria-hidden="true" className="size-3.5" />
+                        {reviewed.has(item.productSlug) ? "Edit review" : "Write a review"}
+                      </Link>
+                    )}
+                    <span className="font-semibold tabular-nums">{formatPrice(item.lineTotalCents / 100)}</span>
+                  </span>
                 </li>
               ))}
             </ul>
