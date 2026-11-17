@@ -56,7 +56,6 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
     ["Brand", brand],
     ["Part number (MPN)", product.mpn],
     ["SKU", product.sku],
-    ["Category", `${category?.name ?? ""} › ${childName(product)}`],
     ["Condition", product.condition],
     ...product.specs,
   ];
