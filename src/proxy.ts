@@ -55,9 +55,8 @@ function escapeHtml(value: string): string {
 const LOGO_SVG = `<svg viewBox="47 335 410 410" width="44" height="44" aria-hidden="true"><path d="M68 437 L252 345 L436 437 L252 529 Z" fill="#6ED653" stroke="#6ED653" stroke-linejoin="round" stroke-width="10"/><path d="M68 540 L110 519 L252 579 L394 519 L436 540 L252 631 Z" fill="#43B02A" stroke="#43B02A" stroke-linejoin="round" stroke-width="10"/><path d="M68 644 L110 623 L252 683 L394 623 L436 644 L252 735 Z" fill="#43B02A" stroke="#43B02A" stroke-linejoin="round" stroke-width="10"/></svg>`;
 
 /**
- * The challenge page. The Turnstile widget stays hidden unless Cloudflare needs the visitor to
- * click (appearance: interaction-only); on success the form posts the token to /api/turnstile,
- * which sets the cookie and redirects straight to `next`.
+ * The challenge page, showing Cloudflare's Turnstile box. On success the form posts the token to
+ * /api/turnstile, which sets the cookie and redirects straight to `next`.
  */
 function challengePage(siteKey: string, hostname: string, next: string): string {
   const host = escapeHtml(hostname.replace(/^www\./, ""));
@@ -71,7 +70,6 @@ function challengePage(siteKey: string, hostname: string, next: string): string 
 <meta name="theme-color" content="#121417" media="(prefers-color-scheme: dark)">
 <title>Just a moment… | STN IT Enterprise</title>
 <link rel="preconnect" href="https://challenges.cloudflare.com">
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async></script>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <style>
   :root {
@@ -101,25 +99,16 @@ function challengePage(siteKey: string, hostname: string, next: string): string 
   .brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 28px; }
   .brand svg { display: block; flex: none; }
   .brand-name { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
-  .ring {
-    width: 44px; height: 44px; margin: 0 auto 20px; border-radius: 50%;
-    border: 3px solid var(--track); border-top-color: var(--accent);
-    animation: spin .9s linear infinite;
-  }
-  .done .ring { animation: none; border-color: var(--accent); position: relative; }
-  .done .ring::after {
-    content: ""; position: absolute; left: 13px; top: 7px; width: 10px; height: 18px;
-    border: solid var(--accent); border-width: 0 3px 3px 0; transform: rotate(45deg);
-  }
-  .failed .ring { animation: none; border-color: var(--error); }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .ring { animation-duration: 2.4s; } }
   h1 { margin: 0 0 8px; font-size: 20px; font-weight: 650; line-height: 1.3; }
   .sub { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; overflow-wrap: anywhere; }
   .failed .sub { color: var(--error); }
   form { margin: 0; }
-  .widget { display: flex; justify-content: center; }
-  .widget:has(iframe) { margin-top: 20px; }
+  .widget { display: flex; justify-content: center; min-height: 65px; margin-top: 24px; }
+  .done .sub { color: var(--accent); font-weight: 600; }
+  @media (max-width: 359px) {
+    .card { padding: 28px 16px 24px; }
+    .widget { min-height: 140px; }
+  }
   .retry {
     display: none; margin: 20px auto 0; padding: 10px 20px; border: 0; border-radius: 999px;
     background: #1f7a1f; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
@@ -133,16 +122,11 @@ function challengePage(siteKey: string, hostname: string, next: string): string 
 <body>
 <main class="card" id="card">
   <div class="brand">${LOGO_SVG}<span class="brand-name">STN IT Enterprise</span></div>
-  <div class="ring" aria-hidden="true"></div>
-  <h1 id="title">Checking your browser</h1>
-  <p class="sub" id="sub" role="status" aria-live="polite">This takes just a moment. You'll be redirected to ${host} shortly.</p>
+  <h1 id="title">Verify you are human</h1>
+  <p class="sub" id="sub" role="status" aria-live="polite">Complete the quick security check below to continue to ${host}.</p>
   <form id="form" method="post" action="/api/turnstile">
     <input type="hidden" name="next" value="${escapeHtml(next)}">
-    <div class="widget">
-      <div class="cf-turnstile" data-sitekey="${escapeHtml(siteKey)}" data-theme="auto"
-        data-appearance="interaction-only" data-refresh-expired="auto"
-        data-callback="stnVerified" data-error-callback="stnFailed" data-unsupported-callback="stnFailed"></div>
-    </div>
+    <div class="widget" id="widget"></div>
   </form>
   <button type="button" class="retry" onclick="location.reload()">Try again</button>
   <noscript><p>Please enable JavaScript and cookies to continue.</p></noscript>
@@ -152,8 +136,7 @@ function challengePage(siteKey: string, hostname: string, next: string): string 
   var card = document.getElementById("card");
   function stnVerified() {
     card.className = "card done";
-    document.getElementById("title").textContent = "Verified";
-    document.getElementById("sub").textContent = "Taking you to the site…";
+    document.getElementById("sub").textContent = "Verified. Taking you to the site…";
     document.getElementById("form").submit();
   }
   function stnFailed() {
@@ -161,7 +144,20 @@ function challengePage(siteKey: string, hostname: string, next: string): string 
     document.getElementById("title").textContent = "Verification failed";
     document.getElementById("sub").textContent = "We couldn't verify your browser. Please try again.";
   }
+  // Rendered explicitly so very narrow phones get Cloudflare's compact box (the normal one is 300px wide).
+  function stnLoad() {
+    window.turnstile.render("#widget", {
+      sitekey: ${JSON.stringify(siteKey).replace(/</g, "\\u003c")},
+      theme: "auto",
+      size: window.innerWidth < 360 ? "compact" : "normal",
+      "refresh-expired": "auto",
+      callback: stnVerified,
+      "error-callback": stnFailed,
+      "unsupported-callback": stnFailed
+    });
+  }
 </script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&amp;onload=stnLoad" async></script>
 </body>
 </html>`;
 }
