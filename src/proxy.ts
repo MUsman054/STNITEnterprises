@@ -33,7 +33,7 @@ export function proxy(request: NextRequest) {
   if (CRAWLER.test(request.headers.get("user-agent") ?? "")) return NextResponse.next();
   if (isValidHumanCookie(request.cookies.get(HUMAN_COOKIE)?.value, keys.secretKey)) return NextResponse.next();
 
-  return new NextResponse(challengePage(keys.siteKey), {
+  return new NextResponse(challengePage(keys.siteKey, request.nextUrl.hostname), {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
@@ -52,60 +52,99 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-function challengePage(siteKey: string): string {
+function challengePage(siteKey: string, hostname: string): string {
+  const host = escapeHtml(hostname.replace(/^www\./, ""));
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
-<title>Just a moment… | STN IT Enterprise</title>
+<meta name="robots" content="noindex, nofollow">
+<title>Just a moment...</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <style>
-  :root { color-scheme: light dark; }
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1d1f20; --muted: #595f66; --line: #e5e7eb; --accent: #1f7a1f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161819; --fg: #e8eaed; --muted: #a0a6ad; --line: #2c3034; --accent: #6ed653; }
+  }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
-    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: #121417; color: #f3f4f6;
+    margin: 0; display: flex; flex-direction: column;
+    background: var(--bg); color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  .card {
-    width: 100%; max-width: 420px; text-align: center; padding: 32px 24px;
-    background: #1d2126; border: 1px solid #2a2f36; border-radius: 16px;
+  .main { flex: 1; width: 100%; max-width: 60rem; margin: 0 auto; padding: 8rem 1.5rem 2rem; }
+  .site { display: flex; align-items: center; gap: .75rem; margin: 0 0 .75rem; }
+  .site img { width: 2.5rem; height: 2.5rem; border-radius: .5rem; object-fit: cover; }
+  h1 { margin: 0; font-size: 2.25rem; font-weight: 500; line-height: 1.2; word-break: break-word; }
+  .main, footer { overflow-wrap: anywhere; }
+  .lead { margin: 0 0 2rem; font-size: 1.5rem; font-weight: 500; line-height: 1.35; }
+  .widget { min-height: 65px; }
+  .note { margin: 2rem 0 0; max-width: 40rem; color: var(--muted); font-size: 1rem; line-height: 1.5; }
+  .state { display: none; align-items: center; gap: .75rem; font-size: 1rem; }
+  .state.show { display: flex; }
+  .state.error { color: #d93025; }
+  .spinner {
+    width: 1.25rem; height: 1.25rem; border-radius: 50%;
+    border: 2px solid var(--line); border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
   }
-  .brand { margin: 0 0 4px; font-size: 20px; font-weight: 700; letter-spacing: .2px; }
-  .brand span { color: #6ed653; }
-  h1 { margin: 16px 0 8px; font-size: 18px; font-weight: 600; }
-  p { margin: 0 0 20px; color: #b9c0c7; font-size: 14px; line-height: 1.5; }
-  .widget { min-height: 65px; display: flex; justify-content: center; }
-  #status { min-height: 20px; margin: 16px 0 0; font-size: 13px; }
-  #status.error { color: #fca5a5; }
-  noscript p { color: #fca5a5; margin-top: 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+  footer {
+    width: 100%; max-width: 60rem; margin: 0 auto; padding: 1rem 1.5rem 1.5rem;
+    border-top: 1px solid var(--line); color: var(--muted); font-size: .75rem;
+    display: flex; flex-wrap: wrap; justify-content: center; gap: .25rem .75rem; text-align: center;
+  }
+  footer a { color: inherit; }
+  noscript p { color: #d93025; }
+  @media (max-width: 720px) {
+    .main { padding-top: 4rem; }
+    h1 { font-size: 1.5rem; }
+    .lead { font-size: 1.125rem; }
+  }
 </style>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
-<main class="card">
-  <p class="brand">STN <span>IT</span> Enterprise</p>
-  <h1>Checking your connection</h1>
-  <p>This quick security check keeps bots away from our store. You'll only see it once.</p>
-  <div class="widget">
-    <div class="cf-turnstile" data-sitekey="${escapeHtml(siteKey)}" data-theme="dark"
+<div class="main" role="main">
+  <div class="site">
+    <img src="/brand/stn-logo-original.jpg" alt="" width="40" height="40">
+    <h1>${host}</h1>
+  </div>
+  <p class="lead" id="lead">Verifying you are human. This may take a few seconds.</p>
+  <div class="widget" id="widget">
+    <div class="cf-turnstile" data-sitekey="${escapeHtml(siteKey)}" data-theme="auto"
       data-callback="stnVerified" data-error-callback="stnFailed" data-expired-callback="stnExpired"></div>
   </div>
-  <p id="status" role="status" aria-live="polite"></p>
-  <noscript><p>Please enable JavaScript to continue.</p></noscript>
-</main>
+  <div class="state" id="state" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span id="state-text"></span></div>
+  <noscript><p>Enable JavaScript and cookies to continue.</p></noscript>
+  <p class="note">${host} needs to review the security of your connection before proceeding.</p>
+</div>
+<footer>
+  <span>Security check by Cloudflare Turnstile</span>
+  <span aria-hidden="true">&middot;</span>
+  <span>&copy; STN IT Enterprise</span>
+</footer>
 <script>
-  var statusEl = document.getElementById("status");
-  function setStatus(text, isError) {
-    statusEl.textContent = text;
-    statusEl.className = isError ? "error" : "";
+  var stateEl = document.getElementById("state");
+  var stateText = document.getElementById("state-text");
+  var leadEl = document.getElementById("lead");
+  function show(text, isError) {
+    stateText.textContent = text;
+    stateEl.className = "state show" + (isError ? " error" : "");
+    stateEl.firstChild.style.display = isError ? "none" : "";
   }
-  function stnFailed() { setStatus("Verification failed. Please refresh the page to try again.", true); }
-  function stnExpired() { setStatus("The check expired. Please complete it again.", true); }
+  function stnFailed() { show("Verification failed. Refresh the page to try again.", true); }
+  function stnExpired() { show("The check expired. Please complete it again.", true); }
   function stnVerified(token) {
-    setStatus("Verified. Loading the site…", false);
+    leadEl.textContent = "Verification successful.";
+    show("Waiting for ${host} to respond...", false);
     fetch("/api/turnstile", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -115,7 +154,8 @@ function challengePage(siteKey: string): string {
       if (!res.ok) throw new Error("rejected");
       window.location.reload();
     }).catch(function () {
-      setStatus("We couldn't verify you. Please try again.", true);
+      leadEl.textContent = "Verifying you are human. This may take a few seconds.";
+      show("We couldn't verify your connection. Please try again.", true);
       if (window.turnstile) window.turnstile.reset();
     });
   }
