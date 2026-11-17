@@ -7,6 +7,10 @@ import { CreditCard, Info, Landmark, Lock, ShoppingBag } from "lucide-react";
 import { placeOrder } from "@/actions/checkout";
 import { useCart } from "@/lib/cart-store";
 import { paymentMethods, usStates, type PaymentMethodId } from "@/lib/order";
+import { citiesByState, stateCodeFor } from "@/lib/us-cities";
+import { ComboField } from "@/components/combo-field";
+
+const stateNames = usStates.map(([, name]) => name);
 import { formatPrice, site } from "@/lib/site";
 import { btnPrimary, cardClass, inputClass, labelClass } from "@/lib/ui";
 import { ProductImage } from "@/components/product-image";
@@ -19,8 +23,8 @@ const fieldOrder = [
   "company",
   "address1",
   "address2",
-  "city",
   "state",
+  "city",
   "zip",
   "notes",
   "agree",
@@ -38,8 +42,8 @@ const emptyValues: Values = {
   company: "",
   address1: "",
   address2: "",
-  city: "",
   state: "",
+  city: "",
   zip: "",
   notes: "",
 };
@@ -59,8 +63,9 @@ function validate(values: Values, agree: boolean): Errors {
   if (!v("firstName")) errors.firstName = "Enter your first name.";
   if (!v("lastName")) errors.lastName = "Enter your last name.";
   if (!v("address1")) errors.address1 = "Enter your street address.";
-  if (!v("city")) errors.city = "Enter your city.";
-  if (!v("state")) errors.state = "Choose your state.";
+  if (!v("state")) errors.state = "Enter or choose your state.";
+  else if (!stateCodeFor(v("state"))) errors.state = "Choose a US state from the list, like Texas or TX.";
+  if (!v("city")) errors.city = "Enter or choose your city.";
 
   if (!v("zip")) errors.zip = "Enter your ZIP code.";
   else if (!/^\d{5}(-\d{4})?$/.test(v("zip"))) errors.zip = "Enter a 5-digit ZIP code, like 33702.";
@@ -73,6 +78,14 @@ const paymentIcons: Record<PaymentMethodId, typeof CreditCard> = {
   card: CreditCard,
   bank: Landmark,
 };
+
+function RequiredMark() {
+  return (
+    <span aria-hidden="true" className="ml-0.5 text-sale">
+      *
+    </span>
+  );
+}
 
 function TextField({
   name,
@@ -95,7 +108,7 @@ function TextField({
     <div>
       <label htmlFor={id} className={labelClass}>
         {label}
-        {optional && <span className="ml-1.5 font-normal text-muted-foreground">(optional)</span>}
+        {optional ? <span className="ml-1.5 font-normal text-muted-foreground">(optional)</span> : <RequiredMark />}
       </label>
       <input
         id={id}
@@ -135,6 +148,8 @@ export function CheckoutView({ enabledMethods }: { enabledMethods: PaymentMethod
   const placing = pending || redirecting;
 
   const total = subtotal + site.shipping.cost;
+  const stateCode = stateCodeFor(values.state);
+  const cityOptions = stateCode ? (citiesByState[stateCode] ?? []) : [];
   const errorCount = Object.keys(errors).length;
 
   function handleChange(name: keyof Values, value: string) {
@@ -165,6 +180,8 @@ export function CheckoutView({ enabledMethods }: { enabledMethods: PaymentMethod
     startTransition(async () => {
       const result = await placeOrder({
         ...values,
+        // The server stores the 2-letter code, so "Texas" or "tx" is sent as "TX".
+        state: stateCodeFor(values.state) ?? values.state,
         agree,
         payment,
         lines: items.map(({ product, qty }) => ({ slug: product.slug, qty })),
@@ -327,53 +344,48 @@ export function CheckoutView({ enabledMethods }: { enabledMethods: PaymentMethod
                 onChange={handleChange}
               />
             </div>
-            <TextField
+            {/* State and City: type freely or pick from the suggestion list. */}
+            <ComboField
+              id="checkout-state"
+              name="state"
+              label={
+                <>
+                  State
+                  <RequiredMark />
+                </>
+              }
+              autoComplete="address-level1"
+              placeholder="Type or choose"
+              options={stateNames}
+              value={values.state}
+              error={errors.state}
+              onChange={(value) => handleChange("state", value)}
+            />
+            <ComboField
+              id="checkout-city"
               name="city"
-              label="City"
+              label={
+                <>
+                  City
+                  <RequiredMark />
+                </>
+              }
               autoComplete="address-level2"
+              placeholder={cityOptions.length ? "Type or choose" : undefined}
+              options={cityOptions}
               value={values.city}
               error={errors.city}
+              onChange={(value) => handleChange("city", value)}
+            />
+            <TextField
+              name="zip"
+              label="ZIP code"
+              autoComplete="postal-code"
+              inputMode="numeric"
+              value={values.zip}
+              error={errors.zip}
               onChange={handleChange}
             />
-            <div className="grid grid-cols-2 gap-5">
-              <div>
-                <label htmlFor="checkout-state" className={labelClass}>
-                  State
-                </label>
-                <select
-                  id="checkout-state"
-                  name="state"
-                  autoComplete="address-level1"
-                  required
-                  value={values.state}
-                  onChange={(event) => handleChange("state", event.target.value)}
-                  aria-invalid={errors.state ? true : undefined}
-                  aria-describedby={errors.state ? "checkout-state-error" : undefined}
-                  className={inputClass}
-                >
-                  <option value="">Select</option>
-                  {usStates.map(([code, name]) => (
-                    <option key={code} value={code}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-                {errors.state && (
-                  <p id="checkout-state-error" className="mt-1.5 text-sm font-medium text-sale">
-                    {errors.state}
-                  </p>
-                )}
-              </div>
-              <TextField
-                name="zip"
-                label="ZIP code"
-                autoComplete="postal-code"
-                inputMode="numeric"
-                value={values.zip}
-                error={errors.zip}
-                onChange={handleChange}
-              />
-            </div>
           </div>
 
           <p className="mt-5 flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-4 text-[15px]">
