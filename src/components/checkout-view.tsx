@@ -6,7 +6,11 @@ import { useState, useTransition } from "react";
 import { CreditCard, Info, Landmark, Lock, ShoppingBag } from "lucide-react";
 import { placeOrder } from "@/actions/checkout";
 import { useCart } from "@/lib/cart-store";
-import { countries, paymentMethods, usStates, type PaymentMethodId } from "@/lib/order";
+import { paymentMethods, usStates, type PaymentMethodId } from "@/lib/order";
+import { citiesByState, stateCodeFor } from "@/lib/us-cities";
+import { ComboField } from "@/components/combo-field";
+
+const stateNames = usStates.map(([, name]) => name);
 import { formatPrice, site } from "@/lib/site";
 import { btnPrimary, cardClass, inputClass, labelClass } from "@/lib/ui";
 import { ProductImage } from "@/components/product-image";
@@ -19,7 +23,6 @@ const fieldOrder = [
   "company",
   "address1",
   "address2",
-  "country",
   "state",
   "city",
   "zip",
@@ -39,7 +42,6 @@ const emptyValues: Values = {
   company: "",
   address1: "",
   address2: "",
-  country: "US",
   state: "",
   city: "",
   zip: "",
@@ -61,15 +63,12 @@ function validate(values: Values, agree: boolean): Errors {
   if (!v("firstName")) errors.firstName = "Enter your first name.";
   if (!v("lastName")) errors.lastName = "Enter your last name.";
   if (!v("address1")) errors.address1 = "Enter your street address.";
-  if (!v("country")) errors.country = "Choose your country.";
-  if (!v("city")) errors.city = "Enter your city.";
+  if (!v("state")) errors.state = "Enter or choose your state.";
+  else if (!stateCodeFor(v("state"))) errors.state = "Choose a US state from the list, like Texas or TX.";
+  if (!v("city")) errors.city = "Enter or choose your city.";
 
-  // State and ZIP are required for US addresses only; many countries have neither.
-  if (v("country") === "US") {
-    if (!v("state")) errors.state = "Choose your state.";
-    if (!v("zip")) errors.zip = "Enter your ZIP code.";
-    else if (!/^\d{5}(-\d{4})?$/.test(v("zip"))) errors.zip = "Enter a 5-digit ZIP code, like 33702.";
-  }
+  if (!v("zip")) errors.zip = "Enter your ZIP code.";
+  else if (!/^\d{5}(-\d{4})?$/.test(v("zip"))) errors.zip = "Enter a 5-digit ZIP code, like 33702.";
 
   if (!agree) errors.agree = "Please accept the terms to place your order.";
   return errors;
@@ -149,7 +148,8 @@ export function CheckoutView({ enabledMethods }: { enabledMethods: PaymentMethod
   const placing = pending || redirecting;
 
   const total = subtotal + site.shipping.cost;
-  const isUS = values.country === "US";
+  const stateCode = stateCodeFor(values.state);
+  const cityOptions = stateCode ? (citiesByState[stateCode] ?? []) : [];
   const errorCount = Object.keys(errors).length;
 
   function handleChange(name: keyof Values, value: string) {
@@ -180,6 +180,8 @@ export function CheckoutView({ enabledMethods }: { enabledMethods: PaymentMethod
     startTransition(async () => {
       const result = await placeOrder({
         ...values,
+        // The server stores the 2-letter code, so "Texas" or "tx" is sent as "TX".
+        state: stateCodeFor(values.state) ?? values.state,
         agree,
         payment,
         lines: items.map(({ product, qty }) => ({ slug: product.slug, qty })),
@@ -342,99 +344,44 @@ export function CheckoutView({ enabledMethods }: { enabledMethods: PaymentMethod
                 onChange={handleChange}
               />
             </div>
-            <div>
-              <label htmlFor="checkout-country" className={labelClass}>
-                Country
-                <RequiredMark />
-              </label>
-              <select
-                id="checkout-country"
-                name="country"
-                autoComplete="country"
-                required
-                value={values.country}
-                onChange={(event) => {
-                  // A US state code means nothing in another country (and vice versa), so start over.
-                  setValues((current) => ({ ...current, country: event.target.value, state: "" }));
-                  setErrors((current) => {
-                    const next = { ...current };
-                    delete next.country;
-                    delete next.state;
-                    delete next.zip;
-                    return next;
-                  });
-                }}
-                aria-invalid={errors.country ? true : undefined}
-                aria-describedby={errors.country ? "checkout-country-error" : undefined}
-                className={inputClass}
-              >
-                {countries.map(([code, name]) => (
-                  <option key={code} value={code}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-              {errors.country && (
-                <p id="checkout-country-error" className="mt-1.5 text-sm font-medium text-sale">
-                  {errors.country}
-                </p>
-              )}
-            </div>
-            {isUS ? (
-              <div>
-                <label htmlFor="checkout-state" className={labelClass}>
+            {/* State and City: type freely or pick from the suggestion list. */}
+            <ComboField
+              id="checkout-state"
+              name="state"
+              label={
+                <>
                   State
                   <RequiredMark />
-                </label>
-                <select
-                  id="checkout-state"
-                  name="state"
-                  autoComplete="address-level1"
-                  required
-                  value={values.state}
-                  onChange={(event) => handleChange("state", event.target.value)}
-                  aria-invalid={errors.state ? true : undefined}
-                  aria-describedby={errors.state ? "checkout-state-error" : undefined}
-                  className={inputClass}
-                >
-                  <option value="">Select</option>
-                  {usStates.map(([code, name]) => (
-                    <option key={code} value={code}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-                {errors.state && (
-                  <p id="checkout-state-error" className="mt-1.5 text-sm font-medium text-sale">
-                    {errors.state}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <TextField
-                name="state"
-                label="State / Province"
-                optional
-                autoComplete="address-level1"
-                value={values.state}
-                error={errors.state}
-                onChange={handleChange}
-              />
-            )}
-            <TextField
+                </>
+              }
+              autoComplete="address-level1"
+              placeholder="Type or choose"
+              options={stateNames}
+              value={values.state}
+              error={errors.state}
+              onChange={(value) => handleChange("state", value)}
+            />
+            <ComboField
+              id="checkout-city"
               name="city"
-              label="City"
+              label={
+                <>
+                  City
+                  <RequiredMark />
+                </>
+              }
               autoComplete="address-level2"
+              placeholder={cityOptions.length ? "Type or choose" : undefined}
+              options={cityOptions}
               value={values.city}
               error={errors.city}
-              onChange={handleChange}
+              onChange={(value) => handleChange("city", value)}
             />
             <TextField
               name="zip"
-              label={isUS ? "ZIP code" : "ZIP / Postal code"}
-              optional={!isUS}
+              label="ZIP code"
               autoComplete="postal-code"
-              inputMode={isUS ? "numeric" : "text"}
+              inputMode="numeric"
               value={values.zip}
               error={errors.zip}
               onChange={handleChange}

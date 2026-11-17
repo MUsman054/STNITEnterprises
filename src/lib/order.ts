@@ -53,35 +53,3 @@ export const usStates: [code: string, name: string][] = [
   ["TX", "Texas"], ["UT", "Utah"], ["VT", "Vermont"], ["VA", "Virginia"], ["WA", "Washington"],
   ["WV", "West Virginia"], ["WI", "Wisconsin"], ["WY", "Wyoming"],
 ];
-
-/**
- * Countries a customer can ship to (ISO 3166-1 alpha-2). Left out: uninhabited territories,
- * and Cuba, Iran, North Korea and Syria, which are under comprehensive US export sanctions.
- */
-const countryCodes = (
-  "AF AX AL DZ AS AD AO AI AG AR AM AW AU AT AZ BS BH BD BB BY BE BZ BJ BM BT BO BQ BA BW BR IO BN BG BF BI CV KH CM CA KY " +
-  "CF TD CL CN CX CC CO KM CG CD CK CR CI HR CW CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FK FO FJ FI FR GF PF GA GM GE DE " +
-  "GH GI GR GL GD GP GU GT GG GN GW GY HT VA HN HK HU IS IN ID IQ IE IM IL IT JM JP JE JO KZ KE KI KR XK KW KG LA LV LB LS " +
-  "LR LY LI LT LU MO MG MW MY MV ML MT MH MQ MR MU YT MX FM MD MC MN ME MS MA MZ MM NA NR NP NL NC NZ NI NE NG NU NF MK MP " +
-  "NO OM PK PW PS PA PG PY PE PH PN PL PT PR QA RE RO RU RW BL SH KN LC MF PM VC WS SM ST SA SN RS SC SL SG SX SK SI SB SO " +
-  "ZA SS ES LK SD SR SJ SE CH TW TJ TZ TH TL TG TK TO TT TN TR TM TC TV UG UA AE GB US UY UZ VU VE VN VG VI WF EH YE ZM ZW"
-).split(" ");
-
-const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
-
-export function countryName(code: string) {
-  try {
-    return regionNames.of(code) ?? code;
-  } catch {
-    return code;
-  }
-}
-
-/** [code, name] pairs: United States first, then A–Z. */
-export const countries: [code: string, name: string][] = [
-  ["US", countryName("US")],
-  ...countryCodes
-    .filter((code) => code !== "US")
-    .map((code): [string, string] => [code, countryName(code)])
-    .sort((a, b) => a[1].localeCompare(b[1])),
-];
