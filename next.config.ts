@@ -14,15 +14,16 @@ const isDev = process.env.NODE_ENV === "development";
  * - tawk.to live chat (only loaded when NEXT_PUBLIC_TAWK_PROPERTY_ID is set)
  * - Google Maps embed on the Contact page
  * - Stripe Checkout (hosted page, reached by redirect after the checkout form posts)
+ * - Cloudflare Turnstile, the one-time "are you human" check served by src/proxy.ts
  */
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://embed.tawk.to https://*.tawk.to`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://embed.tawk.to https://*.tawk.to https://challenges.cloudflare.com`,
   "style-src 'self' 'unsafe-inline' https://*.tawk.to https://fonts.googleapis.com",
   "img-src 'self' blob: data: https://*.tawk.to https://*.googleapis.com https://*.gstatic.com",
   "font-src 'self' data: https://*.tawk.to https://fonts.gstatic.com",
   "connect-src 'self' https://*.tawk.to wss://*.tawk.to",
-  "frame-src https://www.google.com https://maps.google.com https://*.tawk.to",
+  "frame-src https://www.google.com https://maps.google.com https://*.tawk.to https://challenges.cloudflare.com",
   "media-src 'self' https://*.tawk.to",
   "worker-src 'self' blob:",
   "object-src 'none'",
