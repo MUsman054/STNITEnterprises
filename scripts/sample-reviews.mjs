@@ -1,24 +1,39 @@
-// Fills the LOCAL development database with sample reviews, so the review pages can be
-// designed and demoed. Sample reviews are not real customer reviews: this script refuses to
-// run against anything but a local PGlite database (DATABASE_URL=pglite:...), so they can
-// never reach the live store.
+// Fills a database with SAMPLE reviews (1 to 5 per product) so the review pages can be
+// tested and demoed. They are not real customer reviews: remove them before the store launches.
+// All of them belong to accounts ending in @sample.invalid, so --remove deletes every one.
 //
-// Usage (stop `npm run dev` first):
-//   npm run sample-reviews            -> add sample reviews to every product (re-run = refresh)
+// Usage (with a local PGlite database, stop `npm run dev` first):
+//   npm run sample-reviews             -> add sample reviews (re-running replaces them)
 //   npm run sample-reviews -- --remove -> delete all sample reviews and sample accounts
+// A hosted PostgreSQL database (e.g. the Vercel/Neon one) also needs --live, on purpose:
+//   DATABASE_URL=postgres://... npm run sample-reviews -- --live
+//   DATABASE_URL=postgres://... npm run sample-reviews -- --live --remove
 import { config } from "dotenv";
+import postgres from "postgres";
 
 config({ path: [".env.local", ".env"], quiet: true });
 
 const url = process.env.DATABASE_URL ?? "";
-if (!url.startsWith("pglite:") || process.env.VERCEL) {
-  console.error("Refusing to run: sample reviews are only for the local PGlite database (DATABASE_URL=pglite:...).");
+const isLocal = url.startsWith("pglite:");
+if (!url || (!isLocal && !process.argv.includes("--live"))) {
+  console.error("Refusing to run: this is not the local PGlite database. Add --live if you really mean the hosted database.");
   process.exit(1);
 }
 
-const { PGlite } = await import("@electric-sql/pglite");
 const { products } = await import("../src/lib/catalog.ts");
-const db = new PGlite(url.slice("pglite:".length));
+
+/** Same parameterised-query API on PGlite (local) and PostgreSQL. */
+async function connect() {
+  if (isLocal) {
+    const { PGlite } = await import("@electric-sql/pglite");
+    const pg = new PGlite(url.slice("pglite:".length));
+    return { query: async (text, params) => ({ rows: (await pg.query(text, params)).rows }), close: () => pg.close() };
+  }
+  const sql = postgres(url, { max: 1, prepare: false });
+  return { query: async (text, params) => ({ rows: await sql.unsafe(text, params) }), close: () => sql.end() };
+}
+
+const db = await connect();
 const SAMPLE_DOMAIN = "@sample.invalid";
 
 // Always start clean so re-running doesn't pile up duplicates.
@@ -75,7 +90,7 @@ for (const [i, name] of people.entries()) {
 let total = 0;
 for (const product of products) {
   const random = rng(product.slug);
-  const count = 2 + Math.floor(random() * 7); // 2 to 8 reviews
+  const count = 1 + Math.floor(random() * 5); // 1 to 5 reviews
   const order = [...people.keys()].sort(() => random() - 0.5).slice(0, count);
   for (const who of order) {
     const roll = random();
@@ -93,5 +108,5 @@ for (const product of products) {
   }
 }
 
-console.log(`Added ${total} sample reviews to ${products.length} products (local database only).`);
+console.log(`Added ${total} sample reviews to ${products.length} products (${isLocal ? "local" : "hosted"} database).`);
 await db.close();

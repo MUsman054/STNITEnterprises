@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { adminUpdateOrder } from "@/actions/admin";
+import { Select } from "@/components/select";
 import { btnPrimary, inputClass, labelClass } from "@/lib/ui";
 
 export function OrderStatusForm(props: {
@@ -30,16 +31,10 @@ export function OrderStatusForm(props: {
       }}
     >
       <div>
-        <label htmlFor="admin-status" className={labelClass}>
+        <label id="admin-status-label" htmlFor="admin-status" className={labelClass}>
           Status
         </label>
-        <select id="admin-status" value={status} onChange={(event) => setStatus(event.target.value)} className={inputClass}>
-          {props.options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <Select id="admin-status" labelledBy="admin-status-label" value={status} options={props.options} onChange={setStatus} />
       </div>
       <div>
         <label htmlFor="admin-carrier" className={labelClass}>
