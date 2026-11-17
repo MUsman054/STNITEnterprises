@@ -109,7 +109,7 @@ export function DealsOfTheWeek() {
 export function WhyShopWithUs() {
   const items = [
     { icon: Lock, title: "Secure checkout", body: "Encrypted payments through trusted gateways." },
-    { icon: Truck, title: "Fast shipping", body: "Orders ship within 2–5 business days, with tracking." },
+    { icon: Truck, title: "Fast shipping", body: "US orders ship in 2–5 business days, with tracking. We ship worldwide." },
     { icon: PackageCheck, title: "Quality assured", body: "Sourced from certified distributors and manufacturers." },
     { icon: Headset, title: "Expert support", body: "Procurement professionals who know the hardware." },
   ];

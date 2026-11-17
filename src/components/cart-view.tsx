@@ -176,7 +176,7 @@ export function CartView() {
               Proceed to checkout
             </Link>
             <p className="mt-3 text-[13px] text-muted-foreground">
-              {site.shipping.estimate}. Shipping anywhere in the USA.
+              {site.shipping.estimate}. We ship anywhere in the world.
             </p>
           </aside>
         )}
