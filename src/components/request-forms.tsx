@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { CircleCheck, FileText, X } from "lucide-react";
+import { ChevronDown, ChevronUp, CircleCheck, FileText, X } from "lucide-react";
 import { submitRequest } from "@/actions/forms";
 import { Honeypot } from "@/components/honeypot";
 import type { Product } from "@/lib/catalog";
@@ -14,10 +14,18 @@ import { btnOutline, btnPrimary, inputClass, labelClass } from "@/lib/ui";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** An email address, or a phone number of at least 7 digits. */
+function isEmailOrPhone(value: string) {
+  return value.includes("@") ? emailPattern.test(value) : /^\+?[\d\s().-]+$/.test(value) && value.replace(/\D/g, "").length >= 7;
+}
+
 type FieldDef = {
   name: string;
   label: string;
-  type?: "text" | "email" | "number" | "textarea";
+  /** "contact" accepts an email address or a phone number. */
+  type?: "text" | "email" | "contact" | "number" | "textarea";
+  /** Up/down arrow buttons that step a whole number (minimum 1). */
+  stepper?: boolean;
   required?: boolean;
   readOnly?: boolean;
   autoComplete?: string;
@@ -54,6 +62,7 @@ function RequestForm({
       const value = (values[field.name] ?? "").trim();
       if (field.required && !value) found[field.name] = `Enter ${field.label.toLowerCase()}.`;
       else if (value && field.type === "email" && !emailPattern.test(value)) found[field.name] = "Enter a valid email address, like name@company.com.";
+      else if (value && field.type === "contact" && !isEmailOrPhone(value)) found[field.name] = "Enter a valid email address or phone number.";
       else if (value && field.validate) {
         const message = field.validate(value);
         if (message) found[field.name] = message;
@@ -128,10 +137,22 @@ function RequestForm({
             if (errors[field.name]) setErrors((current) => ({ ...current, [field.name]: "" }));
           },
         };
+        const step = (by: number) => {
+          const current = Number.parseInt(values[field.name] ?? "", 10);
+          const next = Math.max(1, (Number.isFinite(current) ? current : 0) + by);
+          setValues((all) => ({ ...all, [field.name]: String(next) }));
+          if (errors[field.name]) setErrors((all) => ({ ...all, [field.name]: "" }));
+        };
+        const stepButton = "grid flex-1 w-10 place-items-center text-muted-foreground transition-colors duration-150 hover:bg-surface hover:text-foreground";
         return (
           <div key={field.name} className={field.half ? "" : "sm:col-span-2"}>
             <label htmlFor={id} className={labelClass}>
               {field.label}
+              {field.required && (
+                <span aria-hidden="true" className="ml-0.5 text-sale">
+                  *
+                </span>
+              )}
               {!field.required && !field.readOnly && <span className="ml-1.5 font-normal text-muted-foreground">(optional)</span>}
             </label>
             {field.type === "textarea" ? (
@@ -145,11 +166,37 @@ function RequestForm({
                 )}
                 <input
                   {...common}
-                  type={field.type === "number" ? "text" : (field.type ?? "text")}
+                  type={field.type === "number" || field.type === "contact" ? "text" : (field.type ?? "text")}
                   inputMode={field.inputMode}
                   autoComplete={field.autoComplete}
-                  className={`${inputClass} ${field.prefix ? "pl-8" : ""} ${field.readOnly ? "bg-surface font-semibold" : ""}`}
+                  onKeyDown={
+                    field.stepper
+                      ? (event) => {
+                          if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+                            event.preventDefault();
+                            step(event.key === "ArrowUp" ? 1 : -1);
+                          }
+                        }
+                      : undefined
+                  }
+                  className={`${inputClass} ${field.prefix ? "pl-8" : ""} ${field.stepper ? "pr-12" : ""} ${field.readOnly ? "bg-surface font-semibold" : ""}`}
                 />
+                {field.stepper && (
+                  <div className="absolute inset-y-px right-px flex flex-col overflow-hidden rounded-r-[7px] border-l border-foreground/25">
+                    <button type="button" tabIndex={-1} aria-label={`Increase ${field.label.toLowerCase()}`} onClick={() => step(1)} className={stepButton}>
+                      <ChevronUp aria-hidden="true" className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      aria-label={`Decrease ${field.label.toLowerCase()}`}
+                      onClick={() => step(-1)}
+                      className={`${stepButton} border-t border-foreground/25`}
+                    >
+                      <ChevronDown aria-hidden="true" className="size-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             {field.hint && !error && (
@@ -257,9 +304,9 @@ export function QuoteRequest({
               fields={[
                 { name: "part", label: "Part number", readOnly: true },
                 { name: "name", label: "Your name", required: true, autoComplete: "name", half: true },
-                { name: "email", label: "Email address", type: "email", required: true, autoComplete: "email", inputMode: "email", half: true },
+                { name: "email", label: "Email address or phone number", type: "contact", required: true, autoComplete: "email", half: true },
                 { name: "targetPrice", label: "Target price (each)", type: "number", inputMode: "decimal", prefix: "$", half: true, validate: positiveNumber("a target price"), hint: "Optional. Helps us match your budget." },
-                { name: "quantity", label: "Quantity", type: "number", required: true, inputMode: "numeric", half: true, validate: (v) => (/^\d+$/.test(v) && Number(v) > 0 ? null : "Enter a whole number of 1 or more.") },
+                { name: "quantity", label: "Quantity", type: "number", required: true, inputMode: "numeric", stepper: true, half: true, validate: (v) => (/^\d+$/.test(v) && Number(v) > 0 ? null : "Enter a whole number of 1 or more.") },
                 { name: "message", label: "Notes", type: "textarea" },
               ]}
             />
