@@ -142,6 +142,15 @@ export const acceptInviteSignupSchema = z.object({
   password,
 });
 
+export const reviewSchema = z.object({
+  slug: z.string().max(200),
+  rating: z.coerce.number("Choose a star rating.").int("Choose a star rating.").min(1, "Choose a star rating.").max(5, "Choose a star rating."),
+  title: optionalText(120),
+  body: text(3000).pipe(z.string().min(20, "Tell other buyers a little more (at least 20 characters).")),
+});
+
+export const reviewReplySchema = z.object({ id: z.uuid(), reply: optionalText(2000) });
+
 /** Turns a ZodError into { field: firstMessage } for the form UI. */
 export function fieldErrors(error: z.ZodError): Record<string, string> {
   const out: Record<string, string> = {};

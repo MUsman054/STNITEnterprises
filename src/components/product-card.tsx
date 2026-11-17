@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Heart, Star } from "lucide-react";
 import { addToCart, removeFromCart, setCartQty, useCart } from "@/lib/cart-store";
 import { brandName, discountPercent, type Product } from "@/lib/catalog";
+import { useReviewStats } from "@/lib/review-stats-store";
 import { toggleWishlist, useWishlist } from "@/lib/wishlist-store";
 import { PriceStack } from "@/components/price";
 import { ProductImage } from "@/components/product-image";
@@ -77,6 +78,27 @@ export function StockLabel({ product, className = "" }: { product: Product; clas
   return <span className={`font-semibold ${state.text} ${className}`}>{state.label}</span>;
 }
 
+/** Real average rating and review count; nothing is shown for products without reviews. */
+function CardRating({ slug }: { slug: string }) {
+  const stats = useReviewStats(slug);
+  if (!stats) return null;
+  const [average, count] = stats;
+  return (
+    <span className="animate-fade-in inline-flex items-center gap-1 text-muted-foreground">
+      <Star aria-hidden="true" className="size-3.5 fill-star text-star" />
+      <span aria-hidden="true" className="font-semibold text-foreground tabular-nums">
+        {average.toFixed(1)}
+      </span>
+      <span aria-hidden="true" className="tabular-nums">
+        ({count})
+      </span>
+      <span className="sr-only">
+        Rated {average.toFixed(1)} out of 5 from {count} {count === 1 ? "review" : "reviews"}
+      </span>
+    </span>
+  );
+}
+
 export function ProductCard({ product, priority }: { product: Product; priority?: boolean }) {
   const discount = discountPercent(product);
   const out = product.stock === "out";
@@ -123,18 +145,7 @@ export function ProductCard({ product, priority }: { product: Product; priority?
 
         <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
           <StockLabel product={product} />
-          <span className="inline-flex items-center gap-1 text-muted-foreground">
-            <Star aria-hidden="true" className="size-3.5 fill-star text-star" />
-            <span aria-hidden="true" className="font-semibold text-foreground tabular-nums">
-              {product.rating.toFixed(1)}
-            </span>
-            <span aria-hidden="true" className="tabular-nums">
-              ({product.reviews})
-            </span>
-            <span className="sr-only">
-              Rated {product.rating.toFixed(1)} out of 5 from {product.reviews} ratings
-            </span>
-          </span>
+          <CardRating slug={product.slug} />
         </p>
 
         <div className="mt-auto pt-3">

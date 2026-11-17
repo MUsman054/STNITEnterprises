@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Lock, RotateCcw, Star, Truck } from "lucide-react";
+import { connection } from "next/server";
+import { Suspense } from "react";
+import { ChevronRight, Lock, PenLine, RotateCcw, Star, Truck } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { BuyBox } from "@/components/buy-box";
 import { Breadcrumbs } from "@/components/page-banner";
 import { ProductRail } from "@/components/product-rail";
+import { NoReviews, ReviewItem, ReviewSummaryCard, reviewsHref } from "@/components/reviews";
 import { Tabs } from "@/components/product-tabs";
 import { ZoomImage } from "@/components/zoom-image";
 import {
@@ -19,6 +22,8 @@ import {
   productsInCategory,
 } from "@/lib/catalog";
 import { site } from "@/lib/site";
+import { btnOutline, btnPrimary } from "@/lib/ui";
+import { getReviews, getReviewSummary } from "@/server/reviews";
 
 // Every slug is prerendered by generateStaticParams; a navigation waits for that page instead of
 // showing a loading shell first (no visible fallback to design).
@@ -89,8 +94,10 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
 
   return (
     <div className="container-page pt-2 pb-10">
-      {/* Escape "<" so a value containing "</script>" can never close the tag (XSS). */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      {/* Streams in with the review data, so search engines see the real rating in the same response. */}
+      <Suspense fallback={null}>
+        <ProductJsonLd slug={product.slug} base={jsonLd} />
+      </Suspense>
       <Breadcrumbs
         crumbs={[
           ...(category ? [{ label: category.short, href: `/category/${category.slug}` }] : []),
@@ -139,12 +146,9 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
                 <dd className="font-mono font-semibold text-foreground">{product.sku}</dd>
               </div>
             </dl>
-            <p className="inline-flex items-center gap-1.5 text-muted-foreground">
-              <Star aria-hidden="true" className="size-4 fill-star text-star" />
-              <span className="font-semibold text-foreground">{product.rating.toFixed(1)}</span>
-              <span className="sr-only">out of 5,</span>
-              <span>· {product.reviews} reviews</span>
-            </p>
+            <Suspense fallback={<span className="h-5 w-28 animate-pulse rounded bg-surface" />}>
+              <RatingLink slug={product.slug} />
+            </Suspense>
           </div>
 
           <p className="mt-4 text-[16px] text-muted-foreground">{product.summary}</p>
@@ -257,6 +261,15 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
         />
       </section>
 
+      <section id="reviews" aria-labelledby="reviews-title" className="mt-12 max-w-5xl scroll-mt-28 border-t border-border pt-8">
+        <h2 id="reviews-title" className="text-[22px] font-bold tracking-tight text-foreground">
+          Customer reviews
+        </h2>
+        <Suspense fallback={<div aria-busy="true" className="mt-5 h-64 animate-pulse rounded-2xl bg-surface" />}>
+          <ReviewsPreview slug={product.slug} />
+        </Suspense>
+      </section>
+
       <div className="mt-10 space-y-5">
         <ProductRail title="Related products" products={related} href={category ? `/category/${category.slug}` : undefined} className="border border-border shadow-none" />
         {sameBrand.length > 0 && (
@@ -265,4 +278,110 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
       </div>
     </div>
   );
+}
+
+/** "★ 4.6 · 12 reviews" next to the title; links to the full reviews page. */
+async function RatingLink({ slug }: { slug: string }) {
+  await connection();
+  const summary = await getReviewSummary(slug);
+  return (
+    <Link
+      href={reviewsHref(slug)}
+      className="-my-2 inline-flex min-h-11 items-center gap-1.5 text-muted-foreground underline-offset-4 transition-colors duration-150 hover:text-primary hover:underline"
+    >
+      <Star aria-hidden="true" className={`size-4 ${summary.count ? "fill-star text-star" : "text-border"}`} />
+      {summary.count > 0 ? (
+        <>
+          <span className="font-semibold text-foreground">{summary.average.toFixed(1)}</span>
+          <span className="sr-only">out of 5,</span>
+          <span>
+            · {summary.count.toLocaleString("en-US")} {summary.count === 1 ? "review" : "reviews"}
+          </span>
+        </>
+      ) : (
+        <span>No reviews</span>
+      )}
+    </Link>
+  );
+}
+
+const PREVIEW_COUNT = 3;
+
+/** Summary plus the latest few reviews, with "Show more" leading to the full reviews page. */
+async function ReviewsPreview({ slug }: { slug: string }) {
+  await connection();
+  const [summary, { reviews }] = await Promise.all([getReviewSummary(slug), getReviews(slug, { limit: PREVIEW_COUNT })]);
+
+  if (summary.count === 0) {
+    return (
+      <div className="mt-5 max-w-2xl">
+        <NoReviews>
+          <Link href={`${reviewsHref(slug)}#write`} className={`${btnPrimary} mt-5`}>
+            <PenLine aria-hidden="true" className="size-4" />
+            Write a review
+          </Link>
+        </NoReviews>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-12">
+      <div className="space-y-4">
+        <ReviewSummaryCard slug={slug} summary={summary} />
+        <Link href={`${reviewsHref(slug)}#write`} className={`${btnOutline} w-full`}>
+          <PenLine aria-hidden="true" className="size-4" />
+          Write a review
+        </Link>
+      </div>
+      <div className="min-w-0">
+        <div className="divide-y divide-border border-b border-border">
+          {reviews.map((review) => (
+            <ReviewItem key={review.id} review={review} />
+          ))}
+        </div>
+        <Link href={reviewsHref(slug)} className={`${btnOutline} mt-5`}>
+          {summary.count > PREVIEW_COUNT ? `Show more reviews (${summary.count.toLocaleString("en-US")})` : "Show more"}
+          <ChevronRight aria-hidden="true" className="size-4" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Product structured data, plus aggregateRating and the latest reviews when the product has
+ * any, so Google can show review stars in search results. Only real, published reviews.
+ */
+async function ProductJsonLd({ slug, base }: { slug: string; base: Record<string, unknown> }) {
+  await connection();
+  let data = base;
+  try {
+    const [summary, { reviews }] = await Promise.all([getReviewSummary(slug), getReviews(slug, { limit: 5 })]);
+    if (summary.count > 0) {
+      data = {
+        ...base,
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: summary.average.toFixed(1),
+          reviewCount: summary.count,
+          bestRating: 5,
+          worstRating: 1,
+        },
+        review: reviews.map((review) => ({
+          "@type": "Review",
+          author: { "@type": "Person", name: review.authorName },
+          datePublished: review.createdAt.toISOString().slice(0, 10),
+          ...(review.title ? { name: review.title } : {}),
+          reviewBody: review.body,
+          reviewRating: { "@type": "Rating", ratingValue: review.rating, bestRating: 5, worstRating: 1 },
+        })),
+      };
+    }
+  } catch (error) {
+    // Never lose the product data because reviews couldn't load.
+    console.error("[reviews] structured data failed:", error);
+  }
+  // Escape "<" so a value containing "</script>" can never close the tag (XSS).
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, "\u003c") }} />;
 }

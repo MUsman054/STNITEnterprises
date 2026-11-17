@@ -4,7 +4,7 @@
  * Category and brand structure follows the client's site specification (STNIT_content.pdf).
  * Product photos come from the client's current website; categories without photos use
  * placeholder illustrations (public/images/catalog/*.webp, drawn for this demo).
- * Every product, price, stock level, specification, rating and review count below is
+ * Every product, price, stock level and specification below is
  * placeholder data. Replace with the client's real catalogue before launch.
  */
 
@@ -206,9 +206,7 @@ export type Product = {
   stock: Stock;
   summary: string;
   specs: [string, string][];
-  /** Dummy merchandising data. Replace with real figures. */
-  rating: number;
-  reviews: number;
+  /** Dummy merchandising data. Replace with real figures. Ratings come from real reviews (src/server/reviews.ts). */
   sold: number;
   added: string; // ISO date, for "Newest"
   featured?: boolean;
@@ -256,8 +254,6 @@ function inCategory(category: string, prefix: string, seeds: Seed[]): Product[] 
       stock: seed.stock ?? "in",
       slug: `${seed.brand}-${slugify(seed.mpn)}-${seed.child}`,
       sku: `STN-${prefix}-${String(index + 1).padStart(3, "0")}`,
-      rating: Math.round((4 + (h % 10) / 10) * 10) / 10,
-      reviews: 4 + (h % 380),
       sold: 10 + (h % 900),
       added,
     };

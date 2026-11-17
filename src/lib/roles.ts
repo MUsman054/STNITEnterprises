@@ -11,6 +11,8 @@ export type Permission =
   | "orders:edit"
   | "inquiries"
   | "subscribers"
+  /** Hide, restore and delete product reviews. */
+  | "reviews"
   | "team:view"
   /** Invite, re-role and remove sales staff. */
   | "team:manage-sales"
@@ -19,8 +21,8 @@ export type Permission =
 
 const permissions: Record<StaffRole, readonly Permission[]> = {
   sales: ["orders:view", "inquiries"],
-  admin: ["orders:view", "orders:edit", "inquiries", "subscribers", "team:view", "team:manage-sales"],
-  owner: ["orders:view", "orders:edit", "inquiries", "subscribers", "team:view", "team:manage-sales", "team:manage-admins"],
+  admin: ["orders:view", "orders:edit", "inquiries", "subscribers", "reviews", "team:view", "team:manage-sales"],
+  owner: ["orders:view", "orders:edit", "inquiries", "subscribers", "reviews", "team:view", "team:manage-sales", "team:manage-admins"],
 };
 
 export function isStaff(role: Role): role is StaffRole {
@@ -51,6 +53,6 @@ export const roleLabel: Record<Role, string> = {
 
 export const roleDescription: Record<StaffRole, string> = {
   sales: "Views orders and inquiries, and marks inquiries handled.",
-  admin: "Full store admin: orders, inquiries, subscribers. Can add and remove sales staff.",
+  admin: "Full store admin: orders, inquiries, subscribers, reviews. Can add and remove sales staff.",
   owner: "Everything, including adding and removing admins.",
 };
