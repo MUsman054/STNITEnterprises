@@ -145,6 +145,24 @@ export async function findPurchase(userId: string, slug: string): Promise<{ orde
   return row ?? null;
 }
 
+/** An order for this product that hasn't been paid yet (so we can say why the form isn't open). */
+export async function findUnpaidPurchase(userId: string, slug: string): Promise<{ number: string; status: OrderStatus } | null> {
+  const [row] = await db()
+    .select({ number: schema.orders.number, status: schema.orders.status })
+    .from(schema.orders)
+    .innerJoin(schema.orderItems, eq(schema.orderItems.orderId, schema.orders.id))
+    .where(
+      and(
+        eq(schema.orders.userId, userId),
+        eq(schema.orderItems.productSlug, slug),
+        inArray(schema.orders.status, ["pending_payment", "awaiting_bank_transfer"]),
+      ),
+    )
+    .orderBy(desc(schema.orders.createdAt))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function getMyReview(userId: string, slug: string) {
   const [row] = await db()
     .select()

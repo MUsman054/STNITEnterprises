@@ -11,7 +11,7 @@ import { NoReviews, ReviewItem, ReviewSummaryCard, reviewsHref } from "@/compone
 import { brandName, getCategory, getProduct, products } from "@/lib/catalog";
 import { btnOutline, btnPrimary } from "@/lib/ui";
 import { getCurrentUser } from "@/server/auth";
-import { findPurchase, getMyReview, getReviews, getReviewSummary, REVIEWS_PAGE_SIZE, reviewSorts, type ReviewSort } from "@/server/reviews";
+import { findPurchase, findUnpaidPurchase, getMyReview, getReviews, getReviewSummary, REVIEWS_PAGE_SIZE, reviewSorts, type ReviewSort } from "@/server/reviews";
 
 export const instant = false;
 
@@ -221,6 +221,22 @@ async function WriteReview({ slug }: { slug: string }) {
 
   const [purchase, existing] = await Promise.all([findPurchase(user.id, slug), getMyReview(user.id, slug)]);
   if (!purchase && !existing) {
+    const unpaid = await findUnpaidPurchase(user.id, slug);
+    if (unpaid) {
+      return (
+        <div className="rounded-xl bg-surface p-4 text-[15px] text-foreground">
+          <p className="font-semibold">Your order {unpaid.number} is waiting for payment.</p>
+          <p className="mt-1 text-muted-foreground">
+            {unpaid.status === "awaiting_bank_transfer"
+              ? "You can review this item as soon as we receive your bank transfer and confirm the order."
+              : "You can review this item once the payment for your order is complete."}{" "}
+            <Link href="/account/orders" className="font-semibold text-primary hover:underline">
+              View your orders
+            </Link>
+          </p>
+        </div>
+      );
+    }
     return (
       <p className="text-[15px] text-foreground">
         Only customers who have bought this item can review it, so every review here is a verified purchase. Ordered as a guest? Sign
